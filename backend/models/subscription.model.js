@@ -79,8 +79,7 @@ const subscriptionSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-subscriptionSchema.index({ user: 1 });
+// Index for faster queries (user already has unique index from schema)
 subscriptionSchema.index({ status: 1 });
 subscriptionSchema.index({ plan: 1 });
 

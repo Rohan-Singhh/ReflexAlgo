@@ -64,6 +64,13 @@ class InternalError extends ApiError {
   }
 }
 
+// Async error handler wrapper - catches async errors and passes to error middleware
+const catchAsync = (fn) => {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+};
+
 module.exports = {
   ApiError,
   ValidationError,
@@ -72,6 +79,9 @@ module.exports = {
   NotFoundError,
   ConflictError,
   RateLimitError,
-  InternalError
+  InternalError,
+  catchAsync,
+  // Alias for backward compatibility
+  errorHandler: catchAsync
 };
 

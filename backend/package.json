@@ -5,14 +5,22 @@
   "scripts": {
     "start": "node --max-old-space-size=8192 --max-semi-space-size=256 --optimize-for-size --gc-interval=100 server.js",
     "dev": "nodemon --max-old-space-size=8192 --max-semi-space-size=256 server.js",
+    "seed:patterns": "node scripts/seedPatterns.js",
     "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["authentication", "jwt", "express", "mongodb", "api"],
+  "keywords": [
+    "authentication",
+    "jwt",
+    "express",
+    "mongodb",
+    "api"
+  ],
   "author": "",
   "license": "ISC",
   "description": "High-performance authentication API with enterprise-grade optimizations",
   "dependencies": {
+    "axios": "^1.12.2",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",

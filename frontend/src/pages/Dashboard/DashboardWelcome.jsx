@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Zap, Crown } from 'lucide-react';
 
-const DashboardWelcome = memo(({ user, onOpenPricing }) => {
+const DashboardWelcome = memo(({ user, stats, onOpenPricing }) => {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -13,9 +13,9 @@ const DashboardWelcome = memo(({ user, onOpenPricing }) => {
       <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8">
         <div className="flex-1">
           <p className="text-sm text-gray-500 mb-3 tracking-wide uppercase">dashboard</p>
-          <h1 className="text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
-            gm {user.name.split(' ')[0]} 👋
-          </h1>
+                <h1 className="text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
+                  gm {user?.name?.split(' ')[0] || 'friend'} 👋
+                </h1>
           <p className="text-gray-400 text-2xl font-light max-w-2xl leading-relaxed">
             ready to make your code <span className="text-gradient font-semibold">lightning fast?</span> 
           </p>
@@ -31,8 +31,10 @@ const DashboardWelcome = memo(({ user, onOpenPricing }) => {
               <TrendingUp className="w-4 h-4 text-purple-400" />
               <p className="text-xs text-gray-500 uppercase tracking-wider">world rank</p>
             </div>
-            <p className="text-4xl font-bold text-white">#2,456</p>
-            <p className="text-xs text-green-400 mt-1">↑ 124 this week</p>
+            <p className="text-4xl font-bold text-white">#{stats?.rank || '—'}</p>
+            <p className="text-xs text-green-400 mt-1">
+              {stats?.rankChange > 0 ? `↑ ${stats.rankChange}` : stats?.rankChange < 0 ? `↓ ${Math.abs(stats.rankChange)}` : '—'} this week
+            </p>
           </motion.div>
           
           <motion.div 
@@ -44,8 +46,10 @@ const DashboardWelcome = memo(({ user, onOpenPricing }) => {
               <Zap className="w-4 h-4 text-yellow-400" />
               <p className="text-xs text-gray-500 uppercase tracking-wider">level</p>
             </div>
-            <p className="text-4xl font-bold text-white">12</p>
-            <p className="text-xs text-purple-400 mt-1">83% to level 13</p>
+            <p className="text-4xl font-bold text-white">{stats?.level || 1}</p>
+            <p className="text-xs text-purple-400 mt-1">
+              {stats?.experienceToNextLevel ? `${Math.round((stats.experience / stats.experienceToNextLevel) * 100)}% to level ${(stats.level || 1) + 1}` : 'Level up!'}
+            </p>
           </motion.div>
 
           {/* Upgrade CTA */}

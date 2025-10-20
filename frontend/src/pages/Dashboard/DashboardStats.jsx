@@ -2,37 +2,37 @@ import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Code2, Zap, TrendingUp, Flame, Trophy, Target, Rocket } from 'lucide-react';
 
-const stats = [
+const getStatsData = (dashboardStats) => [
   { 
     label: 'total reviews', 
-    value: '24', 
+    value: String(dashboardStats?.totalReviews || 0), 
     icon: Code2, 
     color: 'from-blue-500 to-cyan-500', 
-    change: '+12%',
+    change: `${dashboardStats?.totalReviews || 0} total`,
     subtitle: 'this month',
     bgGlow: 'blue'
   },
   { 
     label: 'optimizations', 
-    value: '18', 
+    value: String(dashboardStats?.optimizedReviews || 0), 
     icon: Zap, 
     color: 'from-purple-500 to-pink-500', 
-    change: '+8%',
-    subtitle: '75% success rate',
+    change: `${Math.round((dashboardStats?.optimizedReviews / Math.max(dashboardStats?.totalReviews, 1)) * 100) || 0}%`,
+    subtitle: 'success rate',
     bgGlow: 'purple'
   },
   { 
-    label: 'avg speed boost', 
-    value: '8.5x', 
+    label: 'avg improvement', 
+    value: `${Math.round(dashboardStats?.averageImprovement || 0)}%`, 
     icon: Rocket, 
     color: 'from-emerald-500 to-green-500', 
-    change: '+2.3x',
-    subtitle: 'faster code',
+    change: 'great!',
+    subtitle: 'code quality',
     bgGlow: 'emerald'
   },
   { 
     label: 'streak 🔥', 
-    value: '7', 
+    value: String(dashboardStats?.currentStreak || 0), 
     icon: Flame, 
     color: 'from-orange-500 to-red-500', 
     change: 'keep going!',
@@ -41,7 +41,9 @@ const stats = [
   },
 ];
 
-const DashboardStats = memo(() => {
+const DashboardStats = memo(({ dashboardStats }) => {
+  const stats = getStatsData(dashboardStats);
+  
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8 mb-20">
       {stats.map((stat, index) => (

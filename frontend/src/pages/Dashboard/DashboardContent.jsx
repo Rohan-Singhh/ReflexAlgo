@@ -1,9 +1,10 @@
 import { memo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Upload, Clock, CheckCircle, Code2, ArrowRight, Sparkles, Trophy, TrendingUp, Activity, Zap } from 'lucide-react';
 import Button from '../../components/ui/Button';
 
-const recentReviews = [
+const defaultReviews = [
   {
     id: 1,
     title: 'binary search implementation',
@@ -39,22 +40,21 @@ const recentReviews = [
   },
 ];
 
-const dsa_patterns = [
-  { name: 'Sliding Window', mastery: 80, solved: 8, total: 10, emoji: '🪟', color: 'from-blue-500 to-cyan-500' },
-  { name: 'Two Pointers', mastery: 60, solved: 6, total: 10, emoji: '👉', color: 'from-purple-500 to-pink-500' },
-  { name: 'Binary Search', mastery: 90, solved: 9, total: 10, emoji: '🔍', color: 'from-emerald-500 to-green-500' },
-  { name: 'Dynamic Programming', mastery: 40, solved: 4, total: 10, emoji: '🧮', color: 'from-orange-500 to-red-500' },
+const dsa_patterns_default = [
+  { name: 'Sliding Window', mastery: 0, solved: 0, total: 10, emoji: '🪟', color: 'from-blue-500 to-cyan-500' },
+  { name: 'Two Pointers', mastery: 0, solved: 0, total: 10, emoji: '👉', color: 'from-purple-500 to-pink-500' },
+  { name: 'Binary Search', mastery: 0, solved: 0, total: 10, emoji: '🔍', color: 'from-emerald-500 to-green-500' },
+  { name: 'Dynamic Programming', mastery: 0, solved: 0, total: 10, emoji: '🧮', color: 'from-orange-500 to-red-500' },
 ];
 
-const leaderboard = [
-  { rank: 1, name: 'alex_codes', score: 2847, avatar: '🚀', change: '+12' },
-  { rank: 2, name: 'you', score: 2456, avatar: '⭐', change: '+124', highlight: true },
-  { rank: 3, name: 'code_ninja', score: 2398, avatar: '🥷', change: '+8' },
-  { rank: 4, name: 'dev_master', score: 2287, avatar: '👨‍💻', change: '+45' },
-  { rank: 5, name: 'algo_queen', score: 2156, avatar: '👑', change: '+67' },
+const defaultLeaderboard = [
+  { rank: 1, name: 'Loading...', score: 0, avatar: '⏳', change: '0' },
 ];
 
-const DashboardContent = memo(({ activeTab }) => {
+const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOpenUpload }) => {
+  const navigate = useNavigate();
+  const recentReviews = reviews && reviews.length > 0 ? reviews : defaultReviews;
+  const dsa_patterns = patterns && patterns.length > 0 ? patterns : dsa_patterns_default;
   if (activeTab !== 'overview') {
     return (
       <div className="min-h-[400px] flex items-center justify-center">
@@ -92,7 +92,12 @@ const DashboardContent = memo(({ activeTab }) => {
                 supports JavaScript, Python, Java, C++, and 12 more languages
               </p>
             </div>
-            <Button variant="primary" size="lg" className="group/btn whitespace-nowrap">
+            <Button 
+              variant="primary" 
+              size="lg" 
+              className="group/btn whitespace-nowrap"
+              onClick={onOpenUpload}
+            >
               <Upload className="w-5 h-5 mr-2" />
               upload code
               <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
@@ -123,13 +128,15 @@ const DashboardContent = memo(({ activeTab }) => {
             </div>
 
             <div className="space-y-5">
-              {recentReviews.map((review, index) => (
+              {recentReviews.length > 0 ? (
+                recentReviews.map((review, index) => (
                 <motion.div
                   key={review.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.15, delay: index * 0.03 }}
                   whileHover={{ x: 4 }}
+                  onClick={() => navigate(`/review/${review.id}`)}
                   className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-8 hover:border-white/20 transition-all duration-150 cursor-pointer group"
                 >
                   <div className="flex items-start justify-between gap-6">
@@ -140,9 +147,9 @@ const DashboardContent = memo(({ activeTab }) => {
                         </div>
                         <div>
                           <h3 className="text-xl font-semibold text-white mb-1 group-hover:text-gradient transition-all">
-                            {review.title}
+                            {review.title || 'Untitled Review'}
                           </h3>
-                          <p className="text-sm text-gray-500">{review.language} • {review.lines} lines • {review.date}</p>
+                          <p className="text-sm text-gray-500">{review.language || 'Code'} • {review.lines || 0} lines • {review.date || 'Just now'}</p>
                         </div>
                       </div>
 
@@ -150,31 +157,60 @@ const DashboardContent = memo(({ activeTab }) => {
                         <div>
                           <p className="text-xs text-gray-600 mb-1">before</p>
                           <span className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm font-mono">
-                            {review.complexity}
+                            {review.complexity || 'O(n)'}
                           </span>
                         </div>
                         <ArrowRight className="w-5 h-5 text-gray-600" />
                         <div>
                           <p className="text-xs text-gray-600 mb-1">after</p>
                           <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-sm font-mono">
-                            {review.improved}
+                            {review.improved || 'O(n)'}
                           </span>
                         </div>
                         <div className="ml-auto">
                           <div className="px-4 py-2 bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-2xl">
                             <p className="text-xs text-gray-500 mb-0.5">improvement</p>
-                            <p className="text-2xl font-bold text-emerald-400">{review.improvement}</p>
+                            <p className="text-2xl font-bold text-emerald-400">{review.improvement || '0%'}</p>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <button className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all group-hover:scale-110">
-                      <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
-                    </button>
+                    <div className="flex flex-col items-end gap-3">
+                      <div className={`px-4 py-2 rounded-xl border text-xs font-semibold ${
+                        review.status === 'completed' || review.status === 'optimized'
+                          ? 'bg-emerald-600/10 border-emerald-500/30 text-emerald-400'
+                          : review.status === 'analyzing' || review.status === 'pending'
+                          ? 'bg-blue-600/10 border-blue-500/30 text-blue-400 animate-pulse'
+                          : review.status === 'failed'
+                          ? 'bg-red-600/10 border-red-500/30 text-red-400'
+                          : 'bg-gray-600/10 border-gray-500/30 text-gray-400'
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          <span className="capitalize">{review.status || 'pending'}</span>
+                          {(review.status === 'analyzing' || review.status === 'pending') && (
+                            <div className="flex gap-1">
+                              <div className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                              <div className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                              <div className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <button className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all group-hover:scale-110">
+                        <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
-              ))}
+                ))
+              ) : (
+                <div className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-16 text-center">
+                  <Code2 className="w-20 h-20 text-gray-600 mx-auto mb-4" />
+                  <p className="text-2xl text-gray-400 mb-2">no reviews yet</p>
+                  <p className="text-sm text-gray-600">upload your first code to get AI-powered analysis!</p>
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -242,7 +278,7 @@ const DashboardContent = memo(({ activeTab }) => {
             </div>
 
             <div className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/10 rounded-3xl p-8 space-y-4">
-              {leaderboard.map((user, index) => (
+              {(leaderboard && leaderboard.length > 0 ? leaderboard : defaultLeaderboard).map((user, index) => (
                 <motion.div
                   key={user.rank}
                   initial={{ opacity: 0 }}

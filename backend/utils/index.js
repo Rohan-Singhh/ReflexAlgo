@@ -7,7 +7,9 @@ const {
   NotFoundError,
   ConflictError,
   RateLimitError,
-  InternalError
+  InternalError,
+  catchAsync,
+  errorHandler
 } = require('./errorHandler');
 
 const fastHash = require('./fastHash');
@@ -24,6 +26,10 @@ module.exports = {
   ConflictError,
   RateLimitError,
   InternalError,
+  
+  // Error handler wrapper
+  catchAsync,
+  errorHandler,
   
   // Utility modules
   fastHash,

@@ -14,6 +14,7 @@ const Footer = lazy(() => import(/* webpackPrefetch: true */ './components/Foote
 const SignUp = lazy(() => import(/* webpackPrefetch: true */ './pages/SignUp'));
 const Login = lazy(() => import(/* webpackPrefetch: true */ './pages/Login'));
 const Dashboard = lazy(() => import(/* webpackPreload: true */ './pages/Dashboard'));
+const ReviewDetail = lazy(() => import(/* webpackPrefetch: true */ './pages/ReviewDetail'));
 
 // ⚡ Minimal loading component for better perceived performance
 const PageLoader = () => (
@@ -76,6 +77,16 @@ function App() {
           element={
             <Suspense fallback={<PageLoader />}>
               <Dashboard />
+            </Suspense>
+          } 
+        />
+        
+        {/* Review Detail */}
+        <Route 
+          path="/review/:id" 
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <ReviewDetail />
             </Suspense>
           } 
         />
