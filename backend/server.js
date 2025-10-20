@@ -5,13 +5,18 @@ dotenv.config();
 
 const app = require('./app');
 const { connectDatabase, warmupDatabase, configureProcessHandlers } = require('./config');
+const ensureIndexes = require('./utils/ensureIndexes');
 
 const PORT = process.env.PORT || 5000;
 
-// Connect to Database + Pre-warm connections
+// Connect to Database + Optimize + Pre-warm connections
 connectDatabase().then(async () => {
-  await warmupDatabase();
+  // ⚡ Ensure database indexes for max performance
+  await ensureIndexes();
   
+  // ⚡ Pre-warm connections
+  await warmupDatabase();
+
   const server = app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
