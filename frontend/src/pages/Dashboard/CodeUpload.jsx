@@ -60,41 +60,65 @@ const CodeUpload = ({ onSubmit, onClose }) => {
   // Poll for review completion
   useEffect(() => {
     if (reviewId && isAnalyzing) {
-      console.log('Starting polling for review:', reviewId);
+      console.log('🔄 Starting polling for review:', reviewId);
+      console.log('🔄 isAnalyzing:', isAnalyzing);
       
-      const pollInterval = setInterval(async () => {
+      // Start polling immediately, then every second
+      const pollOnce = async () => {
         try {
+          console.log('📡 Polling...');
           const result = await codeReviewService.getReviewDetails(reviewId);
-          console.log('Poll result:', result.data.status);
+          console.log('📥 Poll result:', {
+            status: result.data.status,
+            hasAnalysis: !!result.data.analysis,
+            reviewId: result.data._id
+          });
           
           // Check for completed status (case-insensitive)
           const status = result.data.status?.toLowerCase();
           
           if (status === 'completed') {
-            console.log('✅ Review completed! Showing results...');
+            console.log('✅ REVIEW COMPLETED! Showing results...');
+            console.log('📊 Analysis data:', result.data.analysis);
             setReviewResult(result.data);
             setIsAnalyzing(false);
             setStep(5); // Move to results step
-            clearInterval(pollInterval);
+            return true; // Stop polling
           } else if (status === 'failed') {
             console.log('❌ Review failed');
             setError('Analysis failed. Please try again.');
             setIsAnalyzing(false);
             setStep(3);
-            clearInterval(pollInterval);
+            return true; // Stop polling
           } else {
             console.log('⏳ Still analyzing, status:', status);
+            return false; // Continue polling
           }
         } catch (err) {
-          console.error('Poll error:', err);
-          // Don't stop polling on error, might be temporary
+          console.error('❌ Poll error:', err);
+          console.error('Error details:', err.response || err.message);
+          return false; // Continue polling despite error
         }
-      }, 1000); // Poll every 1 second (faster!)
+      };
+
+      // Poll immediately
+      pollOnce();
+      
+      // Then poll every second
+      const pollInterval = setInterval(async () => {
+        const shouldStop = await pollOnce();
+        if (shouldStop) {
+          clearInterval(pollInterval);
+        }
+      }, 1000);
 
       return () => {
-        console.log('Stopping polling');
+        console.log('🛑 Stopping polling');
         clearInterval(pollInterval);
       };
+    } else {
+      if (!reviewId) console.log('⚠️ No reviewId set');
+      if (!isAnalyzing) console.log('⚠️ Not analyzing');
     }
   }, [reviewId, isAnalyzing]);
 
@@ -153,6 +177,7 @@ const CodeUpload = ({ onSubmit, onClose }) => {
       setStep(4); // Move to analyzing step
       setError('');
       
+      console.log('🚀 Submitting code...');
       const result = await onSubmit({
         title: title.trim(),
         language,
@@ -160,10 +185,18 @@ const CodeUpload = ({ onSubmit, onClose }) => {
         lineCount
       });
 
+      console.log('📦 Submit result:', result);
+      console.log('📋 Review ID:', result?.data?._id);
+
       if (result?.data?._id) {
         setReviewId(result.data._id);
+        console.log('✅ Review ID set:', result.data._id);
+      } else {
+        console.error('❌ No review ID in response!');
+        console.log('Response structure:', JSON.stringify(result, null, 2));
       }
     } catch (err) {
+      console.error('❌ Submit error:', err);
       setError('Failed to submit code. Please try again.');
       setIsAnalyzing(false);
       setStep(3);
