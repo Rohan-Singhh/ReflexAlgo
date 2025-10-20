@@ -43,85 +43,56 @@ const stats = [
 
 const DashboardStats = memo(() => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-16">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8 mb-20">
       {stats.map((stat, index) => (
         <motion.div
           key={index}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ 
-            delay: index * 0.1,
-            type: "spring",
-            stiffness: 100
+            duration: 0.2,
+            delay: index * 0.05
           }}
-          whileHover={{ scale: 1.05, y: -5 }}
-          className="relative bg-gradient-to-br from-gray-900/50 to-black border border-white/10 rounded-2xl p-6 overflow-hidden group cursor-pointer"
+          whileHover={{ y: -4 }}
+          className="relative bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-8 overflow-hidden group cursor-pointer hover:border-white/20 transition-all duration-150"
         >
           {/* Animated background glow */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-20 transition-all duration-500`} />
+          <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-[0.08] transition-all duration-300`} />
           
           {/* Floating orb effect */}
-          <motion.div
-            className={`absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br ${stat.color} rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity`}
-            animate={{
-              scale: [1, 1.2, 1],
-              rotate: [0, 90, 0],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
+          <div className={`absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br ${stat.color} rounded-full blur-3xl opacity-[0.15] group-hover:opacity-25 transition-opacity duration-300`} />
           
           <div className="relative z-10">
-            {/* Icon and change badge */}
-            <div className="flex items-start justify-between mb-6">
-              <div className="relative">
-                <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} blur-lg opacity-50 group-hover:opacity-100 transition-opacity`} />
-                <div className={`relative p-3 rounded-xl bg-gradient-to-br ${stat.color} shadow-lg`}>
-                  <stat.icon className="w-6 h-6 text-white" strokeWidth={2.5} />
+            {/* Change badge - top right */}
+            <div className="absolute top-0 right-0 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+              <span className="text-xs text-emerald-400 font-semibold">{stat.change}</span>
+            </div>
+
+            {/* Icon */}
+            <div className="mb-8">
+              <div className="relative inline-block">
+                <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} blur-xl opacity-40 group-hover:opacity-70 transition-opacity`} />
+                <div className={`relative p-4 rounded-2xl bg-gradient-to-br ${stat.color} shadow-2xl`}>
+                  <stat.icon className="w-7 h-7 text-white" strokeWidth={2} />
                 </div>
               </div>
-              
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: index * 0.1 + 0.3 }}
-                className="px-2.5 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full"
-              >
-                <span className="text-xs text-emerald-400 font-bold">{stat.change}</span>
-              </motion.div>
             </div>
             
             {/* Value */}
-            <motion.p 
-              className="text-4xl font-bold text-white mb-2 tracking-tight"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 + 0.2 }}
-            >
+            <p className="text-5xl font-bold text-white mb-3 tracking-tighter">
               {stat.value}
-            </motion.p>
+            </p>
             
             {/* Label */}
-            <p className="text-sm font-medium text-gray-300 mb-1">{stat.label}</p>
-            <p className="text-xs text-gray-500">{stat.subtitle}</p>
+            <p className="text-sm font-medium text-gray-400 mb-1.5">{stat.label}</p>
+            <p className="text-xs text-gray-600">{stat.subtitle}</p>
           </div>
 
           {/* Shine effect on hover */}
-          <motion.div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          <div
+            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             style={{
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
-            }}
-            animate={{
-              x: ['-100%', '200%'],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              repeatDelay: 1,
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)',
             }}
           />
         </motion.div>

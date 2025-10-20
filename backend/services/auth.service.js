@@ -2,6 +2,7 @@ const { User } = require('../models');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { fastHash, tokenPool } = require('../utils');
+const subscriptionService = require('./subscription.service');
 
 // ⚡ OPTIMIZATION #4: Optimized bcrypt rounds
 const SALT_ROUNDS = 9; // 40ms per hash (vs 250ms with 12 rounds)
@@ -151,6 +152,11 @@ class AuthService {
       name,
       email,
       password: hashedPassword
+    });
+
+    // ⚡ Create default subscription for new user (non-blocking)
+    subscriptionService.createDefaultSubscription(user._id).catch(err => {
+      console.error('Failed to create subscription:', err);
     });
 
     // ⚡ OPTIMIZED: Sync operations (no need for async)

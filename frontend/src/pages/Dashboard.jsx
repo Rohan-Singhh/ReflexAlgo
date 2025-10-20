@@ -6,11 +6,13 @@ const DashboardHeader = lazy(() => import('./Dashboard/DashboardHeader'));
 const DashboardWelcome = lazy(() => import('./Dashboard/DashboardWelcome'));
 const DashboardStats = lazy(() => import('./Dashboard/DashboardStats'));
 const DashboardContent = lazy(() => import('./Dashboard/DashboardContent'));
+const PricingModal = lazy(() => import('./Dashboard/PricingModal'));
 
 const Dashboard = memo(() => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isPricingOpen, setIsPricingOpen] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
@@ -53,7 +55,7 @@ const Dashboard = memo(() => {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* ⚡ Lazy loaded sub-components for better performance */}
       <Suspense fallback={null}>
         <DashboardHeader 
@@ -61,22 +63,28 @@ const Dashboard = memo(() => {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           onLogout={handleLogout}
+          onOpenPricing={() => setIsPricingOpen(true)}
         />
       </Suspense>
 
-      <main className="w-full px-6 lg:px-12 py-12">
+      <main className="w-full max-w-[1920px] mx-auto px-8 lg:px-16 py-16">
         <Suspense fallback={null}>
-          <DashboardWelcome user={user} />
+          <DashboardWelcome user={user} onOpenPricing={() => setIsPricingOpen(true)} />
         </Suspense>
 
-        <Suspense fallback={<div className="h-32 bg-white/5 rounded-xl animate-pulse" />}>
+        <Suspense fallback={<div className="h-32 bg-white/5 rounded-2xl animate-pulse" />}>
           <DashboardStats />
         </Suspense>
 
-        <Suspense fallback={<div className="h-64 bg-white/5 rounded-xl animate-pulse mt-12" />}>
+        <Suspense fallback={<div className="h-64 bg-white/5 rounded-2xl animate-pulse mt-16" />}>
           <DashboardContent activeTab={activeTab} />
         </Suspense>
       </main>
+
+      {/* Pricing Modal - Rendered at root level */}
+      <Suspense fallback={null}>
+        <PricingModal isOpen={isPricingOpen} onClose={() => setIsPricingOpen(false)} />
+      </Suspense>
     </div>
   );
 });
