@@ -104,13 +104,14 @@ const CodeUpload = ({ onSubmit, onClose }) => {
       // Poll immediately
       pollOnce();
       
-      // Then poll every second
+      // Then poll every 1.5 seconds (reduced frequency)
       const pollInterval = setInterval(async () => {
         const shouldStop = await pollOnce();
         if (shouldStop) {
+          console.log('🛑 Polling stopped - review complete!');
           clearInterval(pollInterval);
         }
-      }, 1000);
+      }, 1500);
 
       return () => {
         console.log('🛑 Stopping polling');
@@ -186,14 +187,18 @@ const CodeUpload = ({ onSubmit, onClose }) => {
       });
 
       console.log('📦 Submit result:', result);
-      console.log('📋 Review ID:', result?.data?._id);
+      
+      // The backend returns { success: true, message: "...", data: { reviewId: "...", status: "..." } }
+      const reviewIdFromResponse = result?.data?.reviewId;
+      
+      console.log('📋 Review ID:', reviewIdFromResponse);
 
-      if (result?.data?._id) {
-        setReviewId(result.data._id);
-        console.log('✅ Review ID set:', result.data._id);
+      if (reviewIdFromResponse) {
+        setReviewId(reviewIdFromResponse);
+        console.log('✅ Review ID set! Starting polling...');
       } else {
         console.error('❌ No review ID in response!');
-        console.log('Response structure:', JSON.stringify(result, null, 2));
+        console.log('Full response:', JSON.stringify(result, null, 2));
       }
     } catch (err) {
       console.error('❌ Submit error:', err);
@@ -211,8 +216,23 @@ const CodeUpload = ({ onSubmit, onClose }) => {
 
   const handleViewFullDetails = () => {
     if (reviewId) {
+      // Stop analyzing state before closing
+      setIsAnalyzing(false);
       onClose();
       navigate(`/review/${reviewId}`);
+    }
+  };
+
+  const handleClose = () => {
+    // Stop analyzing state when closing
+    setIsAnalyzing(false);
+    
+    // Trigger dashboard refresh if we have a review
+    if (reviewId && onClose) {
+      // Notify parent that we're closing so it can refresh
+      onClose(true); // Pass true to indicate refresh needed
+    } else {
+      onClose();
     }
   };
 
@@ -235,7 +255,7 @@ const CodeUpload = ({ onSubmit, onClose }) => {
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isAnalyzing}
             className={`p-2 hover:bg-white/10 rounded-xl transition-colors ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
@@ -685,7 +705,7 @@ const CodeUpload = ({ onSubmit, onClose }) => {
                     view full details
                   </Button>
                   <Button
-                    onClick={onClose}
+                    onClick={handleClose}
                     variant="secondary"
                     className="flex-1"
                   >

@@ -82,8 +82,8 @@ const Dashboard = memo(() => {
     try {
       const result = await codeReviewService.submitCode(reviewData);
       
-      // Refresh dashboard data to show new review
-      fetchDashboardData();
+      // Don't refresh immediately - let modal handle it
+      // Only refresh when modal closes or user views full details
       
       // Return the result so CodeUpload can handle the analyzing state
       return result;
@@ -156,14 +156,24 @@ const Dashboard = memo(() => {
         {isUploadOpen && (
           <CodeUpload
             onSubmit={handleCodeSubmit}
-            onClose={() => setIsUploadOpen(false)}
+            onClose={(shouldRefresh) => {
+              setIsUploadOpen(false);
+              // Refresh dashboard if user closed after submission
+              if (shouldRefresh) {
+                setTimeout(() => fetchDashboardData(), 300);
+              }
+            }}
           />
         )}
       </Suspense>
 
-      {/* Auto-refresh when there are analyzing reviews */}
+      {/* Auto-refresh when there are analyzing reviews (but not when upload modal is open) */}
       <Suspense fallback={null}>
-        <AutoRefresh reviews={reviews} onRefresh={fetchDashboardData} />
+        <AutoRefresh 
+          reviews={reviews} 
+          onRefresh={fetchDashboardData}
+          isUploadOpen={isUploadOpen}
+        />
       </Suspense>
     </div>
   );
