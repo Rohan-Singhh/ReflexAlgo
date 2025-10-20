@@ -1,6 +1,5 @@
 const express = require('express');
-const configureMiddleware = require('./config/middleware.config');
-const configureRoutes = require('./config/routes.config');
+const { configureMiddleware, configureRoutes } = require('./config');
 
 const app = express();
 

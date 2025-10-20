@@ -4,9 +4,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const app = require('./app');
-const connectDatabase = require('./config/database');
-const warmupDatabase = require('./config/warmup');
-const { configureProcessHandlers } = require('./config/server.config');
+const { connectDatabase, warmupDatabase, configureProcessHandlers } = require('./config');
 
 const PORT = process.env.PORT || 5000;
 

@@ -3,9 +3,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
 const express = require('express');
-const { apiLimiter } = require('../middleware/rateLimiter.middleware');
-const { preventNoSQLInjection, preventXSS, preventHPP } = require('../middleware/security.middleware');
-const addRequestId = require('../middleware/requestId.middleware');
+const { apiLimiter, preventNoSQLInjection, preventXSS, preventHPP, addRequestId } = require('../middleware');
 
 // ⚡ OPTIMIZED: Pre-compute constants
 const IS_DEV = process.env.NODE_ENV === 'development';

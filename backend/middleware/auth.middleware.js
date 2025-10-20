@@ -1,4 +1,4 @@
-const authService = require('../services/auth.service');
+const { authService } = require('../services');
 
 // ⚡ OPTIMIZED: Reuse error responses (avoid creating objects every time)
 const UNAUTHORIZED_RESPONSE = {

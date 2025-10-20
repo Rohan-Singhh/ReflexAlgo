@@ -1,4 +1,4 @@
-const { errorHandler } = require('../middleware/errorHandler.middleware');
+const { errorHandler } = require('../middleware');
 
 // ⚡ OPTIMIZED: Reuse response objects
 const NOT_FOUND_BASE = {
