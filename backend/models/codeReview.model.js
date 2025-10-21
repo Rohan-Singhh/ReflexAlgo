@@ -30,17 +30,29 @@ const codeReviewSchema = new mongoose.Schema({
     timeComplexity: {
       before: String,
       after: String,
-      improved: Boolean
+      improved: Boolean,
+      explanation: String,
+      bottlenecks: [String],
+      proofOfImprovement: String
     },
     spaceComplexity: {
       before: String,
       after: String,
-      improved: Boolean
+      improved: Boolean,
+      explanation: String,
+      memoryImpact: String,
+      tradeoffs: String
     },
     improvementPercentage: {
       type: Number,
       min: 0,
       max: 100
+    },
+    performanceMetrics: {
+      estimatedSpeedup: String,
+      scalability: String,
+      worstCaseScenario: String,
+      realWorldImpact: String
     },
     optimizationSuggestions: [{
       title: String,
@@ -49,12 +61,36 @@ const codeReviewSchema = new mongoose.Schema({
         type: String,
         enum: ['low', 'medium', 'high', 'critical']
       },
-      lineNumber: Number
+      lineNumber: Number,
+      impact: String,
+      codeExample: String,
+      estimatedEffort: String,
+      alternatives: [String]
     }],
     detectedPatterns: [{
-      type: String,
-      ref: 'DSAPattern'
+      pattern: String,
+      confidence: String,
+      location: String,
+      usage: String
     }],
+    codeSmells: [{
+      type: String,
+      issue: String,
+      location: String,
+      severity: String,
+      fix: String
+    }],
+    securityConcerns: [{
+      issue: String,
+      severity: String,
+      recommendation: String,
+      lineNumber: Number
+    }],
+    bestPractices: {
+      followed: [String],
+      missing: [String],
+      recommendations: [String]
+    },
     codeQualityScore: {
       type: Number,
       min: 0,
@@ -64,7 +100,40 @@ const codeReviewSchema = new mongoose.Schema({
       type: Number,
       min: 0,
       max: 100
-    }
+    },
+    maintainabilityScore: {
+      type: Number,
+      min: 0,
+      max: 100
+    },
+    testabilityScore: {
+      type: Number,
+      min: 0,
+      max: 100
+    },
+    qualityBreakdown: {
+      codeQuality: {
+        score: Number,
+        factors: mongoose.Schema.Types.Mixed
+      },
+      readability: {
+        score: Number,
+        factors: mongoose.Schema.Types.Mixed
+      }
+    },
+    learningResources: [{
+      topic: String,
+      url: String,
+      relevance: String
+    }],
+    nextSteps: [String],
+    estimatedROI: {
+      developmentTime: String,
+      performanceGain: String,
+      maintenanceReduction: String,
+      userExperienceImprovement: String
+    },
+    note: String
   },
   optimizedCode: {
     type: String,
@@ -101,8 +170,9 @@ const codeReviewSchema = new mongoose.Schema({
 // Indexes for faster queries
 codeReviewSchema.index({ user: 1, createdAt: -1 });
 codeReviewSchema.index({ status: 1 });
-codeReviewSchema.index({ 'analysis.detectedPatterns': 1 });
+codeReviewSchema.index({ 'analysis.detectedPatterns.pattern': 1 });
 codeReviewSchema.index({ language: 1 });
+codeReviewSchema.index({ 'analysis.codeQualityScore': 1 });
 
 module.exports = mongoose.model('CodeReview', codeReviewSchema);
 

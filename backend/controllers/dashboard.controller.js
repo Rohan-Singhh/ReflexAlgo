@@ -118,7 +118,7 @@ exports.getRecentReviews = errorHandler(async (req, res) => {
       .lean()
       .maxTimeMS(5000); // Timeout after 5 seconds
 
-    // Format for frontend
+    // Format for frontend with premium details
     return reviews.map((review) => ({
       id: review._id,
       title: review.title,
@@ -128,7 +128,14 @@ exports.getRecentReviews = errorHandler(async (req, res) => {
       status: review.status === 'completed' ? 'optimized' : review.status,
       improvement: review.analysis?.improvementPercentage ? `${Math.round(review.analysis.improvementPercentage)}%` : '0%',
       date: getRelativeTime(review.createdAt),
-      lines: review.lineCount
+      lines: review.lineCount,
+      // Premium analysis fields
+      qualityScore: review.analysis?.codeQualityScore || review.analysis?.qualityBreakdown?.codeQuality?.score || null,
+      readabilityScore: review.analysis?.readabilityScore || review.analysis?.qualityBreakdown?.readability?.score || null,
+      suggestionsCount: review.analysis?.optimizationSuggestions?.length || 0,
+      securityIssuesCount: review.analysis?.securityConcerns?.length || 0,
+      patternsDetected: review.analysis?.detectedPatterns?.length || 0,
+      speedup: review.analysis?.performanceMetrics?.estimatedSpeedup || null
     }));
   });
 

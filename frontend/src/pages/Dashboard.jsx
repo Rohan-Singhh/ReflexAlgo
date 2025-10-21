@@ -199,6 +199,7 @@ const Dashboard = memo(() => {
               <DashboardWelcome 
                 user={user} 
                 stats={dashboardStats}
+                subscription={subscription}
                 onOpenPricing={() => setIsPricingOpen(true)} 
               />
             </Suspense>

@@ -53,26 +53,72 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-6 text-sm text-gray-500">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        <span>{review.date}</span>
+                    {/* Premium Details Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                      {/* Date & Lines */}
+                      <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                        <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
+                          <Clock className="w-3 h-3" />
+                          <span>analyzed</span>
+                        </div>
+                        <p className="text-sm text-white font-medium">{review.date}</p>
+                        <p className="text-xs text-gray-500 mt-1">{review.lines} lines</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Activity className="w-4 h-4" />
-                        <span>{review.lines} lines</span>
+
+                      {/* Complexity */}
+                      <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 mb-1">complexity</p>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 bg-red-500/10 border border-red-500/20 text-red-400 rounded text-xs font-mono">{review.complexity}</span>
+                          <span className="text-gray-600">→</span>
+                          <span className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded text-xs font-mono">{review.improved}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-orange-400">{review.complexity}</span>
-                        <span>→</span>
-                        <span className="text-emerald-400">{review.improved}</span>
-                      </div>
+
+                      {/* Performance Improvement */}
                       {review.improvement !== '0%' && (
-                        <div className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
-                          <span className="text-xs font-semibold text-emerald-400">{review.improvement}</span>
+                        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
+                          <p className="text-xs text-emerald-500 mb-1">⚡ speedup</p>
+                          <p className="text-2xl font-bold text-emerald-400">{review.improvement}</p>
+                        </div>
+                      )}
+
+                      {/* Quality Score (if available) */}
+                      {review.qualityScore && (
+                        <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+                          <p className="text-xs text-blue-500 mb-1">💎 quality</p>
+                          <p className="text-2xl font-bold text-blue-400">{review.qualityScore}/100</p>
                         </div>
                       )}
                     </div>
+
+                    {/* Premium Insights Row */}
+                    {(review.suggestionsCount > 0 || review.securityIssuesCount > 0 || review.patternsDetected > 0 || review.speedup) && (
+                      <div className="flex items-center gap-3 mt-4 flex-wrap">
+                        {review.suggestionsCount > 0 && (
+                          <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center gap-2">
+                            <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-xs font-medium text-emerald-400">{review.suggestionsCount} optimizations</span>
+                          </div>
+                        )}
+                        {review.securityIssuesCount > 0 && (
+                          <div className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
+                            <span className="text-xs font-medium text-red-400">⚠️ {review.securityIssuesCount} security alerts</span>
+                          </div>
+                        )}
+                        {review.patternsDetected > 0 && (
+                          <div className="px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-lg flex items-center gap-2">
+                            <span className="text-xs font-medium text-purple-400">🧠 {review.patternsDetected} patterns found</span>
+                          </div>
+                        )}
+                        {review.speedup && (
+                          <div className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2">
+                            <TrendingUp className="w-3.5 h-3.5 text-yellow-400" />
+                            <span className="text-xs font-medium text-yellow-400">{review.speedup}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-3 flex-shrink-0">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Code2, Zap, Clock, CheckCircle, AlertCircle, Copy, Check, Sparkles, TrendingUp, Target, Brain } from 'lucide-react';
+import { ArrowLeft, Code2, Zap, Clock, CheckCircle, AlertCircle, Copy, Check, Sparkles, TrendingUp, Target, Brain, Shield, BookOpen, ListChecks, BarChart3, Gauge, ExternalLink, AlertTriangle } from 'lucide-react';
 import codeReviewService from '../services/codeReviewService';
 import Button from '../components/ui/Button';
 
@@ -344,12 +344,114 @@ const ReviewDetail = () => {
               </motion.div>
             </div>
 
+            {/* Performance Metrics */}
+            {review.analysis?.performanceMetrics && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-10 mb-12"
+              >
+                <div className="flex items-center gap-3 mb-8">
+                  <Gauge className="w-7 h-7 text-blue-400" />
+                  <h2 className="text-3xl font-bold text-white">performance metrics</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {review.analysis.performanceMetrics.estimatedSpeedup && (
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                      <p className="text-sm text-gray-400 mb-2">estimated speedup</p>
+                      <p className="text-2xl font-bold text-emerald-400">{review.analysis.performanceMetrics.estimatedSpeedup}</p>
+                    </div>
+                  )}
+                  {review.analysis.performanceMetrics.scalability && (
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                      <p className="text-sm text-gray-400 mb-2">scalability</p>
+                      <p className="text-lg text-gray-200">{review.analysis.performanceMetrics.scalability}</p>
+                    </div>
+                  )}
+                  {review.analysis.performanceMetrics.worstCaseScenario && (
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                      <p className="text-sm text-gray-400 mb-2">worst case</p>
+                      <p className="text-lg text-gray-200 font-mono">{review.analysis.performanceMetrics.worstCaseScenario}</p>
+                    </div>
+                  )}
+                  {review.analysis.performanceMetrics.realWorldImpact && (
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                      <p className="text-sm text-gray-400 mb-2">real-world impact</p>
+                      <p className="text-lg text-gray-200">{review.analysis.performanceMetrics.realWorldImpact}</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Complexity Analysis */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+              {/* Time Complexity Details */}
+              {review.analysis?.timeComplexity && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-8"
+                >
+                  <h3 className="text-2xl font-bold text-white mb-6">time complexity analysis</h3>
+                  <p className="text-gray-300 mb-6 leading-relaxed">{review.analysis.timeComplexity.explanation}</p>
+                  
+                  {review.analysis.timeComplexity.bottlenecks && review.analysis.timeComplexity.bottlenecks.length > 0 && (
+                    <div className="mb-6">
+                      <p className="text-sm font-semibold text-red-400 mb-3">🔴 bottlenecks:</p>
+                      <ul className="space-y-2">
+                        {review.analysis.timeComplexity.bottlenecks.map((bottleneck, idx) => (
+                          <li key={idx} className="text-sm text-gray-400 pl-4 border-l-2 border-red-500/30">{bottleneck}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {review.analysis.timeComplexity.proofOfImprovement && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                      <p className="text-sm font-semibold text-emerald-400 mb-2">⚡ proof of improvement:</p>
+                      <p className="text-sm text-gray-300">{review.analysis.timeComplexity.proofOfImprovement}</p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Space Complexity Details */}
+              {review.analysis?.spaceComplexity && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35 }}
+                  className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-8"
+                >
+                  <h3 className="text-2xl font-bold text-white mb-6">space complexity analysis</h3>
+                  <p className="text-gray-300 mb-6 leading-relaxed">{review.analysis.spaceComplexity.explanation}</p>
+                  
+                  {review.analysis.spaceComplexity.memoryImpact && (
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6">
+                      <p className="text-sm font-semibold text-blue-400 mb-2">💾 memory impact:</p>
+                      <p className="text-sm text-gray-300">{review.analysis.spaceComplexity.memoryImpact}</p>
+                    </div>
+                  )}
+                  
+                  {review.analysis.spaceComplexity.tradeoffs && (
+                    <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
+                      <p className="text-sm font-semibold text-orange-400 mb-2">⚖️ tradeoffs:</p>
+                      <p className="text-sm text-gray-300">{review.analysis.spaceComplexity.tradeoffs}</p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </div>
+
             {/* AI Summary */}
             {review.analysis?.summary && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 }}
+                transition={{ delay: 0.4 }}
                 className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-10 mb-12"
               >
                 <div className="flex items-center gap-3 mb-6">
@@ -360,47 +462,327 @@ const ReviewDetail = () => {
               </motion.div>
             )}
 
-            {/* Issues Found */}
-            {review.analysis?.issues && review.analysis.issues.length > 0 && (
+            {/* Optimization Suggestions - Premium */}
+            {review.analysis?.optimizationSuggestions && review.analysis.optimizationSuggestions.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
+                transition={{ delay: 0.45 }}
                 className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-10 mb-12"
               >
-                <h2 className="text-3xl font-bold text-white mb-8">issues found</h2>
-                <div className="space-y-5">
-                  {review.analysis.issues.map((issue, index) => (
+                <div className="flex items-center gap-3 mb-8">
+                  <Target className="w-7 h-7 text-emerald-400" />
+                  <h2 className="text-3xl font-bold text-white">optimization suggestions</h2>
+                </div>
+                <div className="space-y-6">
+                  {review.analysis.optimizationSuggestions.map((suggestion, index) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.35 + index * 0.1 }}
+                      transition={{ delay: 0.5 + index * 0.05 }}
                       className="bg-white/5 border border-white/10 rounded-2xl p-8 hover:border-white/20 transition-all"
                     >
-                      <div className="flex items-start gap-5">
-                        <div className={`px-4 py-2 rounded-xl text-sm font-bold ${
-                          issue.severity === 'high' 
+                      <div className="flex items-start gap-6">
+                        <div className={`px-4 py-2 rounded-xl text-sm font-bold flex-shrink-0 ${
+                          suggestion.priority === 'critical' 
                             ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                            : issue.severity === 'medium'
+                            : suggestion.priority === 'high'
                             ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                            : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                            : suggestion.priority === 'medium'
+                            ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                            : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                         }`}>
-                          {issue.severity}
+                          {suggestion.priority}
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-xl font-semibold text-white mb-3">{issue.type}</h3>
-                          <p className="text-gray-400 mb-4 leading-relaxed">{issue.description}</p>
-                          {issue.suggestion && (
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-5">
-                              <p className="text-sm text-emerald-400 font-semibold mb-2">💡 suggestion:</p>
-                              <p className="text-sm text-gray-300 leading-relaxed">{issue.suggestion}</p>
+                          <h3 className="text-xl font-semibold text-white mb-3">{suggestion.title}</h3>
+                          <p className="text-gray-400 mb-4 leading-relaxed">{suggestion.description}</p>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            {suggestion.impact && (
+                              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
+                                <p className="text-xs text-emerald-400 font-semibold mb-1">💥 IMPACT</p>
+                                <p className="text-sm text-gray-300">{suggestion.impact}</p>
+                              </div>
+                            )}
+                            {suggestion.estimatedEffort && (
+                              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                                <p className="text-xs text-blue-400 font-semibold mb-1">⏱️ TIME</p>
+                                <p className="text-sm text-gray-300">{suggestion.estimatedEffort}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {suggestion.codeExample && (
+                            <div className="bg-black/50 border border-white/10 rounded-xl p-4 mb-4">
+                              <p className="text-xs text-gray-500 mb-2">💻 code example:</p>
+                              <pre className="text-sm text-gray-300 font-mono overflow-x-auto">{suggestion.codeExample}</pre>
+                            </div>
+                          )}
+
+                          {suggestion.alternatives && suggestion.alternatives.length > 0 && (
+                            <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+                              <p className="text-xs text-purple-400 font-semibold mb-2">🔄 ALTERNATIVES</p>
+                              <ul className="space-y-1">
+                                {suggestion.alternatives.map((alt, i) => (
+                                  <li key={i} className="text-sm text-gray-300">• {alt}</li>
+                                ))}
+                              </ul>
                             </div>
                           )}
                         </div>
                       </div>
                     </motion.div>
                   ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Code Smells */}
+            {review.analysis?.codeSmells && review.analysis.codeSmells.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.55 }}
+                className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-10 mb-12"
+              >
+                <div className="flex items-center gap-3 mb-8">
+                  <AlertTriangle className="w-7 h-7 text-orange-400" />
+                  <h2 className="text-3xl font-bold text-white">code smells detected</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {review.analysis.codeSmells.map((smell, index) => (
+                    <div key={index} className="bg-white/5 border border-white/10 rounded-xl p-6">
+                      <div className={`inline-block px-3 py-1 rounded-lg text-xs font-bold mb-3 ${
+                        smell.severity === 'high' ? 'bg-red-500/20 text-red-400' : 
+                        smell.severity === 'medium' ? 'bg-orange-500/20 text-orange-400' : 
+                        'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {smell.type}
+                      </div>
+                      <h4 className="text-white font-semibold mb-2">{smell.issue}</h4>
+                      <p className="text-sm text-gray-400 mb-3">{smell.location}</p>
+                      <p className="text-sm text-emerald-400">✓ {smell.fix}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Security Concerns */}
+            {review.analysis?.securityConcerns && review.analysis.securityConcerns.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="bg-gradient-to-br from-red-600/10 to-orange-600/10 border border-red-500/20 rounded-3xl p-10 mb-12"
+              >
+                <div className="flex items-center gap-3 mb-8">
+                  <Shield className="w-7 h-7 text-red-400" />
+                  <h2 className="text-3xl font-bold text-white">security concerns</h2>
+                </div>
+                <div className="space-y-4">
+                  {review.analysis.securityConcerns.map((concern, index) => (
+                    <div key={index} className="bg-black/30 border border-red-500/30 rounded-xl p-6">
+                      <div className="flex items-start gap-4">
+                        <div className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                          concern.severity === 'high' ? 'bg-red-500/30 text-red-300' : 'bg-orange-500/30 text-orange-300'
+                        }`}>
+                          {concern.severity}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-white font-semibold mb-2">{concern.issue}</h4>
+                          <p className="text-sm text-gray-400 mb-3">{concern.recommendation}</p>
+                          {concern.lineNumber && (
+                            <p className="text-xs text-gray-500">Line {concern.lineNumber}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Detected Patterns */}
+            {review.analysis?.detectedPatterns && review.analysis.detectedPatterns.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.65 }}
+                className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-10 mb-12"
+              >
+                <div className="flex items-center gap-3 mb-8">
+                  <Brain className="w-7 h-7 text-purple-400" />
+                  <h2 className="text-3xl font-bold text-white">detected patterns</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {review.analysis.detectedPatterns.map((pattern, index) => (
+                    <div key={index} className="bg-white/5 border border-white/10 rounded-xl p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-xl font-bold text-white">{pattern.pattern}</h4>
+                        <div className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                          pattern.confidence === 'high' ? 'bg-emerald-500/20 text-emerald-400' :
+                          pattern.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {pattern.confidence} confidence
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-400 mb-2">{pattern.location}</p>
+                      <p className="text-sm text-gray-300">{pattern.usage}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Quality Scores */}
+            {review.analysis?.qualityBreakdown && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-10 mb-12"
+              >
+                <div className="flex items-center gap-3 mb-8">
+                  <BarChart3 className="w-7 h-7 text-blue-400" />
+                  <h2 className="text-3xl font-bold text-white">quality breakdown</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {review.analysis.qualityBreakdown.codeQuality && (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-white">code quality</h4>
+                        <span className="text-3xl font-bold text-emerald-400">{review.analysis.qualityBreakdown.codeQuality.score}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {Object.entries(review.analysis.qualityBreakdown.codeQuality.factors || {}).map(([key, value]) => (
+                          <div key={key} className="bg-white/5 border border-white/10 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 mb-1">{key}</p>
+                            <p className="text-sm text-gray-300">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {review.analysis.qualityBreakdown.readability && (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-white">readability</h4>
+                        <span className="text-3xl font-bold text-blue-400">{review.analysis.qualityBreakdown.readability.score}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {Object.entries(review.analysis.qualityBreakdown.readability.factors || {}).map(([key, value]) => (
+                          <div key={key} className="bg-white/5 border border-white/10 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 mb-1">{key}</p>
+                            <p className="text-sm text-gray-300">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Learning Resources */}
+            {review.analysis?.learningResources && review.analysis.learningResources.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.75 }}
+                className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-10 mb-12"
+              >
+                <div className="flex items-center gap-3 mb-8">
+                  <BookOpen className="w-7 h-7 text-yellow-400" />
+                  <h2 className="text-3xl font-bold text-white">learning resources</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {review.analysis.learningResources.map((resource, index) => (
+                    <a 
+                      key={index} 
+                      href={resource.url}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="bg-white/5 border border-white/10 rounded-xl p-6 hover:border-yellow-500/30 hover:bg-white/10 transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h4 className="text-white font-semibold mb-2 group-hover:text-yellow-400 transition-colors">{resource.topic}</h4>
+                          <p className="text-sm text-gray-400 mb-3">{resource.relevance}</p>
+                        </div>
+                        <ExternalLink className="w-5 h-5 text-gray-500 group-hover:text-yellow-400 transition-colors" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Next Steps */}
+            {review.analysis?.nextSteps && review.analysis.nextSteps.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="bg-gradient-to-br from-purple-600/10 to-indigo-600/10 border border-purple-500/20 rounded-3xl p-10 mb-12"
+              >
+                <div className="flex items-center gap-3 mb-8">
+                  <ListChecks className="w-7 h-7 text-purple-400" />
+                  <h2 className="text-3xl font-bold text-white">next steps</h2>
+                </div>
+                <div className="space-y-3">
+                  {review.analysis.nextSteps.map((step, index) => (
+                    <div key={index} className="flex items-start gap-4 bg-white/5 border border-white/10 rounded-xl p-5 hover:border-purple-500/30 transition-all">
+                      <div className="w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center flex-shrink-0">
+                        <span className="text-purple-400 font-bold text-sm">{index + 1}</span>
+                      </div>
+                      <p className="text-gray-300 leading-relaxed flex-1">{step}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ROI Analysis */}
+            {review.analysis?.estimatedROI && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.85 }}
+                className="bg-gradient-to-br from-emerald-600/10 to-green-600/10 border border-emerald-500/20 rounded-3xl p-10 mb-12"
+              >
+                <div className="flex items-center gap-3 mb-8">
+                  <TrendingUp className="w-7 h-7 text-emerald-400" />
+                  <h2 className="text-3xl font-bold text-white">ROI analysis</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {review.analysis.estimatedROI.developmentTime && (
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
+                      <p className="text-sm text-gray-400 mb-2">⏱️ time investment</p>
+                      <p className="text-2xl font-bold text-white">{review.analysis.estimatedROI.developmentTime}</p>
+                    </div>
+                  )}
+                  {review.analysis.estimatedROI.performanceGain && (
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
+                      <p className="text-sm text-gray-400 mb-2">🚀 performance gain</p>
+                      <p className="text-2xl font-bold text-emerald-400">{review.analysis.estimatedROI.performanceGain}</p>
+                    </div>
+                  )}
+                  {review.analysis.estimatedROI.maintenanceReduction && (
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
+                      <p className="text-sm text-gray-400 mb-2">🛠️ maintenance</p>
+                      <p className="text-2xl font-bold text-blue-400">{review.analysis.estimatedROI.maintenanceReduction}</p>
+                    </div>
+                  )}
+                  {review.analysis.estimatedROI.userExperienceImprovement && (
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
+                      <p className="text-sm text-gray-400 mb-2">✨ UX improvement</p>
+                      <p className="text-2xl font-bold text-purple-400">{review.analysis.estimatedROI.userExperienceImprovement}</p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
