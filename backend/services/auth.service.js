@@ -172,10 +172,13 @@ class AuthService {
       password: hashedPassword
     });
 
-    // ⚡ Create default subscription for new user (non-blocking)
-    subscriptionService.createDefaultSubscription(user._id).catch(err => {
+    // ⚡ IMPORTANT: Create subscription synchronously to avoid race conditions
+    try {
+      await subscriptionService.createDefaultSubscription(user._id);
+    } catch (err) {
       console.error('Failed to create subscription:', err);
-    });
+      // Continue anyway - subscription will be created on first use
+    }
 
     // ⚡ OPTIMIZED: Sync operations (no need for async)
     const token = this.generateToken(user._id);

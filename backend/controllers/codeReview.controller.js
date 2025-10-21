@@ -1,6 +1,7 @@
-const { CodeReview, UserProgress, Leaderboard, Activity, Notification, Subscription } = require('../models');
+const { CodeReview, UserProgress, Leaderboard, Activity, Notification } = require('../models');
 const { errorHandler } = require('../utils');
 const aiService = require('../services/ai.service');
+const subscriptionService = require('../services/subscription.service');
 
 // Submit code for review
 exports.submitCode = errorHandler(async (req, res) => {
@@ -15,13 +16,17 @@ exports.submitCode = errorHandler(async (req, res) => {
     });
   }
 
+  // Get or create subscription (handles new users automatically)
+  const subscription = await subscriptionService.getUserSubscription(userId);
+  
   // Check subscription limits
-  const subscription = await Subscription.findOne({ user: userId });
-  if (!subscription || !subscription.canCreateReview()) {
+  if (!subscription.canCreateReview()) {
     return res.status(403).json({
       success: false,
       message: 'Review limit reached. Upgrade to Pro for unlimited reviews!',
-      upgradeRequired: true
+      upgradeRequired: true,
+      currentUsage: subscription.usage.codeReviewsUsed,
+      limit: subscription.features.codeReviewsLimit
     });
   }
 

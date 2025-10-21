@@ -1,23 +1,24 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Sparkles, Users, Building2, X, Crown } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Button from '../../components/ui/Button';
+import subscriptionService from '../../services/subscriptionService';
 
 const plans = [
   {
     name: 'starter',
     price: '$0',
-    period: 'limited trial',
-    description: 'test the waters',
+    period: 'forever free',
+    description: 'get started for free',
     features: [
-      '10 code reviews per month',
+      '3 AI code reviews',
       'basic dashboard access',
       'community support',
-      'core AI features only',
-      'limited pattern recognition',
+      'core AI features',
+      'basic pattern recognition',
       'standard response time',
     ],
-    cta: 'start trial',
+    cta: 'current plan',
     popular: false,
   },
   {
@@ -26,7 +27,7 @@ const plans = [
     period: 'per month',
     description: 'most popular choice',
     features: [
-      'unlimited code reviews',
+      'unlimited AI code reviews',
       'advanced AI engine',
       'real-time refactoring',
       'priority support (< 1hr)',
@@ -50,7 +51,7 @@ const plans = [
       'admin controls & SSO',
       'dedicated account manager',
     ],
-    cta: 'contact sales',
+    cta: 'talk to our team',
     popular: false,
     icon: Users,
     badge: 'best value',
@@ -68,28 +69,62 @@ const plans = [
       'on-premise deployment',
       'white-label options',
     ],
-    cta: 'book a demo',
+    cta: 'see it in action',
     popular: false,
     icon: Building2,
   },
 ];
 
-const PricingModal = ({ isOpen, onClose }) => {
+const PricingModal = ({ isOpen, onClose, onUpgradeSuccess, currentPlan }) => {
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradingPlan, setUpgradingPlan] = useState(null);
+
   // ESC key to close
   useEffect(() => {
     const handleEsc = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !upgrading) onClose();
     };
     if (isOpen) {
       window.addEventListener('keydown', handleEsc);
       return () => window.removeEventListener('keydown', handleEsc);
     }
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, upgrading]);
 
-  const handleUpgrade = (planName) => {
-    // TODO: Integrate with payment system (Stripe, etc.)
-    alert(`Upgrading to ${planName} plan... (Payment integration coming soon!)`);
-    onClose();
+  const handleUpgrade = async (planName) => {
+    // Don't upgrade if already on this plan
+    if (currentPlan === planName) {
+      return;
+    }
+
+    setUpgrading(true);
+    setUpgradingPlan(planName);
+
+    try {
+      // Call the subscription service to upgrade
+      const response = await subscriptionService.changePlan(planName);
+      
+      // Show success message
+      if (response.success) {
+        // Wait a bit to show success state
+        setTimeout(() => {
+          setUpgrading(false);
+          setUpgradingPlan(null);
+          
+          // Call the success callback to refresh dashboard
+          if (onUpgradeSuccess) {
+            onUpgradeSuccess(planName);
+          }
+          
+          // Close modal
+          onClose();
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Upgrade failed:', error);
+      alert(`Failed to upgrade: ${error}`);
+      setUpgrading(false);
+      setUpgradingPlan(null);
+    }
   };
 
   if (!isOpen) return null;
@@ -204,8 +239,25 @@ const PricingModal = ({ isOpen, onClose }) => {
                           size="lg"
                           className="w-full transition-all duration-150"
                           onClick={() => handleUpgrade(plan.name)}
+                          disabled={upgrading || currentPlan === plan.name}
                         >
-                          {plan.cta}
+                          {upgrading && upgradingPlan === plan.name ? (
+                            <>
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                              />
+                              <span>upgrading...</span>
+                            </>
+                          ) : currentPlan === plan.name ? (
+                            <>
+                              <Check className="w-4 h-4" />
+                              <span>current plan</span>
+                            </>
+                          ) : (
+                            plan.cta
+                          )}
                         </Button>
                       </motion.div>
                     ))}

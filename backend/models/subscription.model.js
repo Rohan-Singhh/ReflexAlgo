@@ -30,7 +30,7 @@ const subscriptionSchema = new mongoose.Schema({
   features: {
     codeReviewsLimit: {
       type: Number,
-      default: 10 // For starter plan
+      default: 3 // Free users get only 3 AI code reviews
     },
     hasAdvancedAI: {
       type: Boolean,
@@ -115,7 +115,7 @@ subscriptionSchema.methods.resetMonthlyUsage = function() {
 subscriptionSchema.statics.getPlanFeatures = function(planName) {
   const plans = {
     starter: {
-      codeReviewsLimit: 10,
+      codeReviewsLimit: 3, // Free users get only 3 AI code reviews
       hasAdvancedAI: false,
       hasPrioritySupport: false,
       hasTeamDashboard: false,

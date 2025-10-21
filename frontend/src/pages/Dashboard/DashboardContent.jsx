@@ -4,42 +4,6 @@ import { motion } from 'framer-motion';
 import { Upload, Clock, CheckCircle, Code2, ArrowRight, Sparkles, Trophy, TrendingUp, Activity, Zap } from 'lucide-react';
 import Button from '../../components/ui/Button';
 
-const defaultReviews = [
-  {
-    id: 1,
-    title: 'binary search implementation',
-    language: 'JavaScript',
-    complexity: 'O(n²)',
-    improved: 'O(log n)',
-    status: 'optimized',
-    improvement: '85%',
-    date: '2h ago',
-    lines: 42
-  },
-  {
-    id: 2,
-    title: 'two sum problem',
-    language: 'Python',
-    complexity: 'O(n²)',
-    improved: 'O(n)',
-    status: 'optimized',
-    improvement: '92%',
-    date: '5h ago',
-    lines: 28
-  },
-  {
-    id: 3,
-    title: 'merge sort algorithm',
-    language: 'Java',
-    complexity: 'O(n log n)',
-    improved: 'O(n log n)',
-    status: 'optimal',
-    improvement: '15%',
-    date: '1d ago',
-    lines: 67
-  },
-];
-
 const dsa_patterns_default = [
   { name: 'Sliding Window', mastery: 0, solved: 0, total: 10, emoji: '🪟', color: 'from-blue-500 to-cyan-500' },
   { name: 'Two Pointers', mastery: 0, solved: 0, total: 10, emoji: '👉', color: 'from-purple-500 to-pink-500' },
@@ -48,13 +12,286 @@ const dsa_patterns_default = [
 ];
 
 const defaultLeaderboard = [
-  { rank: 1, name: 'Loading...', score: 0, avatar: '⏳', change: '0' },
+  { rank: 1, name: 'Loading...', score: 0, avatar: '⏳', change: '' },
 ];
 
-const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOpenUpload }) => {
+const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOpenUpload, allReviews, setActiveTab }) => {
   const navigate = useNavigate();
-  const recentReviews = reviews && reviews.length > 0 ? reviews : defaultReviews;
+  // Only show real reviews from database, no dummy data
+  const recentReviews = reviews && reviews.length > 0 ? reviews : [];
   const dsa_patterns = patterns && patterns.length > 0 ? patterns : dsa_patterns_default;
+  
+  // Reviews Tab
+  if (activeTab === 'reviews') {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h2 className="text-4xl font-bold text-white mb-2">all reviews</h2>
+          <p className="text-gray-500">your complete code review history</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5">
+          {allReviews && allReviews.length > 0 ? (
+            allReviews.map((review, index) => (
+              <motion.div
+                key={review.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: index * 0.05 }}
+                className="group relative bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/10 hover:border-white/20 rounded-2xl p-6 cursor-pointer transition-all duration-150"
+                onClick={() => navigate(`/review/${review.id}`)}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Code2 className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                      <h3 className="text-xl font-semibold text-white truncate group-hover:text-purple-400 transition-colors">
+                        {review.title}
+                      </h3>
+                      <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs font-medium text-gray-400">
+                        {review.language}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-6 text-sm text-gray-500">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        <span>{review.date}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Activity className="w-4 h-4" />
+                        <span>{review.lines} lines</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-orange-400">{review.complexity}</span>
+                        <span>→</span>
+                        <span className="text-emerald-400">{review.improved}</span>
+                      </div>
+                      {review.improvement !== '0%' && (
+                        <div className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
+                          <span className="text-xs font-semibold text-emerald-400">{review.improvement}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className={`px-4 py-2 rounded-xl flex items-center gap-2 ${
+                      review.status === 'optimized'
+                        ? 'bg-emerald-500/10 border border-emerald-500/20'
+                        : review.status === 'analyzing'
+                        ? 'bg-blue-500/10 border border-blue-500/20'
+                        : 'bg-yellow-500/10 border border-yellow-500/20'
+                    }`}>
+                      {review.status === 'optimized' && <CheckCircle className="w-4 h-4 text-emerald-400" />}
+                      {review.status === 'analyzing' && <Clock className="w-4 h-4 text-blue-400 animate-spin" />}
+                      <span className={`text-sm font-medium ${
+                        review.status === 'optimized'
+                          ? 'text-emerald-400'
+                          : review.status === 'analyzing'
+                          ? 'text-blue-400'
+                          : 'text-yellow-400'
+                      }`}>
+                        {review.status}
+                      </span>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-6">
+                <Code2 className="w-12 h-12 text-gray-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">no reviews yet</h3>
+              <p className="text-gray-500">upload your first code from the overview tab to get AI-powered optimization insights</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  
+  // Leaderboard Tab - Cool & Modern Design
+  if (activeTab === 'leaderboard') {
+    const leaderboardData = leaderboard && leaderboard.length > 0 ? leaderboard : defaultLeaderboard;
+    const topThree = leaderboardData.slice(0, 3);
+    const rest = leaderboardData.slice(3);
+    
+    return (
+      <div className="space-y-8">
+        {/* Header with Trophy */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/30"
+            >
+              <Trophy className="w-7 h-7 text-white" />
+            </motion.div>
+            <div>
+              <h2 className="text-3xl font-bold text-white">leaderboard</h2>
+              <p className="text-gray-500 text-sm">compete. climb. conquer.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Top 3 - Compact Podium */}
+        {topThree.length >= 3 && (
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-3 gap-4 items-end">
+              {/* 2nd Place */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+                className="bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border border-white/10 rounded-2xl p-4 hover:border-gray-400/30 transition-all"
+              >
+                <div className="flex flex-col items-center">
+                  <div className="relative mb-3">
+                    <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center shadow-lg">
+                      <span className="text-2xl">{topThree[1]?.avatar || '⭐'}</span>
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                      2
+                    </div>
+                  </div>
+                  <p className="text-base font-bold text-white mb-1 truncate w-full text-center">{topThree[1]?.name || 'N/A'}</p>
+                  <p className="text-xs text-gray-400 mb-2">{topThree[1]?.score.toLocaleString() || 0} pts</p>
+                  <div className="w-full h-16 bg-gradient-to-t from-gray-500/20 to-gray-600/10 border-t-2 border-gray-400 rounded-t-lg" />
+                </div>
+              </motion.div>
+
+              {/* 1st Place - Tallest */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                className="bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border-2 border-yellow-500/30 rounded-2xl p-4 hover:border-yellow-500/50 transition-all relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-yellow-500/5 to-transparent" />
+                <div className="relative flex flex-col items-center">
+                  <div className="relative mb-3">
+                    <div className="w-20 h-20 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center shadow-xl shadow-yellow-500/30">
+                      <span className="text-3xl">{topThree[0]?.avatar || '👑'}</span>
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-7 h-7 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full flex items-center justify-center text-sm font-bold text-white">
+                      1
+                    </div>
+                    <Sparkles className="absolute -top-0.5 -left-0.5 w-4 h-4 text-yellow-400 animate-pulse" />
+                  </div>
+                  <p className="text-lg font-bold text-white mb-1 truncate w-full text-center">{topThree[0]?.name || 'N/A'}</p>
+                  <p className="text-xs text-gray-300 mb-2">{topThree[0]?.score.toLocaleString() || 0} pts</p>
+                  <div className="w-full h-24 bg-gradient-to-t from-yellow-500/20 to-orange-500/10 border-t-2 border-yellow-400 rounded-t-lg" />
+                </div>
+              </motion.div>
+
+              {/* 3rd Place */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.3 }}
+                className="bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border border-white/10 rounded-2xl p-4 hover:border-orange-600/30 transition-all"
+              >
+                <div className="flex flex-col items-center">
+                  <div className="relative mb-3">
+                    <div className="w-16 h-16 bg-gradient-to-br from-orange-600 to-orange-800 rounded-full flex items-center justify-center shadow-lg">
+                      <span className="text-2xl">{topThree[2]?.avatar || '🥉'}</span>
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-orange-600 to-orange-800 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                      3
+                    </div>
+                  </div>
+                  <p className="text-base font-bold text-white mb-1 truncate w-full text-center">{topThree[2]?.name || 'N/A'}</p>
+                  <p className="text-xs text-gray-400 mb-2">{topThree[2]?.score.toLocaleString() || 0} pts</p>
+                  <div className="w-full h-12 bg-gradient-to-t from-orange-600/20 to-orange-700/10 border-t-2 border-orange-600 rounded-t-lg" />
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        )}
+
+        {/* Rest of Leaderboard */}
+        {rest.length > 0 && (
+          <div className="max-w-4xl mx-auto space-y-2">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2 px-2">
+              <TrendingUp className="w-5 h-5 text-purple-400" />
+              rising stars
+            </h3>
+            {rest.map((user, index) => (
+              <motion.div
+                key={user.rank}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, delay: index * 0.03 }}
+                className={`group flex items-center gap-4 p-4 rounded-xl transition-all duration-150 ${
+                  user.highlight
+                    ? 'bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-500/40'
+                    : 'bg-[#141414] border border-white/5 hover:border-white/10 hover:bg-[#1a1a1a]'
+                }`}
+              >
+                {/* Rank Badge */}
+                <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm transition-all ${
+                  user.highlight
+                    ? 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white'
+                    : 'bg-white/5 text-gray-400 group-hover:bg-white/10'
+                }`}>
+                  {user.rank}
+                </div>
+
+                {/* User Info */}
+                <div className="flex-1 flex items-center gap-3 min-w-0">
+                  <span className="text-2xl flex-shrink-0">{user.avatar}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className={`font-semibold truncate ${user.highlight ? 'text-white' : 'text-gray-200'}`}>
+                      {user.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {user.score.toLocaleString()} pts
+                    </p>
+                  </div>
+                </div>
+
+                {/* Change Badge */}
+                {user.change && user.change !== '0' && (
+                  <div className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
+                    user.change.startsWith('+') 
+                      ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' 
+                      : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                  }`}>
+                    {user.change.startsWith('+') ? <TrendingUp className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
+                    {user.change}
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {leaderboardData.length <= 1 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-12"
+          >
+            <div className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600/10 border border-purple-500/20 rounded-xl">
+              <Trophy className="w-5 h-5 text-yellow-400" />
+              <p className="text-gray-300 text-sm">
+                complete more code reviews to climb the leaderboard! 🚀
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </div>
+    );
+  }
+  
+  // Other tabs (patterns, etc.)
   if (activeTab !== 'overview') {
     return (
       <div className="min-h-[400px] flex items-center justify-center">
@@ -316,15 +553,28 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                     </p>
                   </div>
 
-                  {/* Change Badge */}
-                  <div className="flex-shrink-0 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                    <span className="text-xs font-semibold text-emerald-400">{user.change}</span>
-                  </div>
+                  {/* Change Badge - Only show if there's actual change */}
+                  {user.change && user.change !== '0' && (
+                    <div className={`flex-shrink-0 px-3 py-1.5 rounded-full ${
+                      user.change.startsWith('+') 
+                        ? 'bg-emerald-500/10 border border-emerald-500/20' 
+                        : 'bg-red-500/10 border border-red-500/20'
+                    }`}>
+                      <span className={`text-xs font-semibold ${
+                        user.change.startsWith('+') ? 'text-emerald-400' : 'text-red-400'
+                      }`}>
+                        {user.change}
+                      </span>
+                    </div>
+                  )}
                 </motion.div>
               ))}
 
               {/* View Full Leaderboard */}
-              <button className="w-full mt-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-2xl text-white font-medium transition-all duration-150 group">
+              <button 
+                onClick={() => setActiveTab('leaderboard')}
+                className="w-full mt-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-2xl text-white font-medium transition-all duration-150 group cursor-pointer"
+              >
                 <span className="flex items-center justify-center gap-2">
                   view full leaderboard
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

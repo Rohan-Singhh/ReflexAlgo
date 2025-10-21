@@ -4,7 +4,56 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 
-const DashboardHeader = memo(({ user, activeTab, setActiveTab, onLogout, onOpenPricing }) => {
+const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onLogout, onOpenPricing }) => {
+  // Get plan details
+  const planName = subscription?.plan || 'starter';
+  const isStarter = planName === 'starter';
+  const isPro = planName === 'pro';
+  const isTeam = planName === 'team';
+  const isEnterprise = planName === 'enterprise';
+  
+  // Usage details for free users
+  const usageUsed = subscription?.usage?.used || 0;
+  const usageLimit = subscription?.usage?.limit || 3;
+  const usageCount = isStarter ? `${usageUsed}/${usageLimit}` : null;
+  
+  // Plan badge colors and icons
+  const planConfig = {
+    starter: { 
+      label: 'free', 
+      color: 'from-gray-500/10 to-gray-600/10', 
+      borderColor: 'border-gray-500/20 hover:border-gray-500/40',
+      textColor: 'text-gray-400',
+      dotColor: 'text-gray-600 group-hover:text-gray-500',
+      upgradeText: '• upgrade'
+    },
+    pro: { 
+      label: 'pro', 
+      color: 'from-yellow-500/10 to-orange-500/10', 
+      borderColor: 'border-yellow-500/20 hover:border-yellow-500/40',
+      textColor: 'text-yellow-400',
+      dotColor: 'text-yellow-600 group-hover:text-yellow-500',
+      upgradeText: ''
+    },
+    team: { 
+      label: 'team', 
+      color: 'from-green-500/10 to-emerald-500/10', 
+      borderColor: 'border-green-500/20 hover:border-green-500/40',
+      textColor: 'text-green-400',
+      dotColor: 'text-green-600 group-hover:text-green-500',
+      upgradeText: ''
+    },
+    enterprise: { 
+      label: 'enterprise', 
+      color: 'from-purple-500/10 to-indigo-500/10', 
+      borderColor: 'border-purple-500/20 hover:border-purple-500/40',
+      textColor: 'text-purple-400',
+      dotColor: 'text-purple-600 group-hover:text-purple-500',
+      upgradeText: ''
+    }
+  };
+  
+  const currentPlan = planConfig[planName] || planConfig.starter;
   return (
     <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-2xl">
       <div className="w-full max-w-[1920px] mx-auto px-8 lg:px-16">
@@ -60,14 +109,20 @@ const DashboardHeader = memo(({ user, activeTab, setActiveTab, onLogout, onOpenP
           </div>
 
           <div className="flex items-center space-x-4">
-            {/* Pro Badge - Clickable to open pricing */}
+            {/* Plan Badge - Clickable to open pricing */}
             <button
               onClick={onOpenPricing}
-              className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:border-yellow-500/40 rounded-2xl transition-all duration-150 group cursor-pointer"
+              className={`hidden lg:flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r ${currentPlan.color} border ${currentPlan.borderColor} rounded-2xl transition-all duration-150 group cursor-pointer`}
+              title={isStarter ? `${usageUsed}/${usageLimit} reviews used - Upgrade for unlimited` : 'Manage subscription'}
             >
-              <Crown className="w-4 h-4 text-yellow-400 group-hover:scale-110 transition-transform duration-150" />
-              <span className="text-sm font-semibold text-yellow-400">pro</span>
-              <span className="text-xs text-yellow-600 group-hover:text-yellow-500 transition-colors duration-150">• upgrade</span>
+              <Crown className={`w-4 h-4 ${currentPlan.textColor} group-hover:scale-110 transition-transform duration-150`} />
+              <span className={`text-sm font-semibold ${currentPlan.textColor}`}>{currentPlan.label}</span>
+              {isStarter && usageCount && (
+                <span className={`text-xs ${currentPlan.textColor} opacity-70`}>{usageCount}</span>
+              )}
+              {isStarter && (
+                <span className={`text-xs ${currentPlan.dotColor} transition-colors duration-150`}>{currentPlan.upgradeText}</span>
+              )}
             </button>
 
             {/* Notifications */}
@@ -83,7 +138,7 @@ const DashboardHeader = memo(({ user, activeTab, setActiveTab, onLogout, onOpenP
               </div>
               <div className="hidden lg:block">
                 <p className="text-sm font-semibold text-white leading-none mb-1.5">{user?.name || 'User'}</p>
-                <p className="text-xs text-gray-600 leading-none">pro member</p>
+                <p className="text-xs text-gray-600 leading-none">{currentPlan.label} member</p>
               </div>
             </div>
 
