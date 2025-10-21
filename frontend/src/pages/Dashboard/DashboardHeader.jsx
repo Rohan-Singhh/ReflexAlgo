@@ -60,15 +60,25 @@ const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onL
         <div className="flex justify-between items-center h-24">
           <div className="flex items-center space-x-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center space-x-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl blur-md opacity-40 group-hover:opacity-70 transition-opacity" />
+            <Link to="/" className="flex items-center space-x-3 group cursor-pointer">
+              <motion.div 
+                className="relative"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl blur-md opacity-40 group-hover:opacity-70 transition-opacity duration-200" />
                 <div className="relative bg-gradient-to-br from-indigo-500 to-purple-500 p-3 rounded-xl">
-                  <Zap className="w-6 h-6 text-white" strokeWidth={2.5} />
+                  <motion.div
+                    whileHover={{ rotate: [0, -15, 15, -15, 0], scale: [1, 1.1, 1.1, 1.1, 1] }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <Zap className="w-6 h-6 text-white" strokeWidth={2.5} />
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
               <div>
-                <span className="text-lg font-bold text-white block leading-none tracking-tight">ReflexAlgo</span>
+                <span className="text-lg font-bold text-white block leading-none tracking-tight group-hover:text-purple-300 transition-colors duration-150">ReflexAlgo</span>
                 <span className="text-xs text-gray-600 leading-none">dashboard</span>
               </div>
             </Link>
@@ -84,23 +94,30 @@ const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onL
                 <motion.button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  whileHover={{ y: -1 }}
-                  whileTap={{ y: 0 }}
-                  className={`relative px-6 py-3 rounded-2xl text-sm font-medium transition-all ${
+                  whileHover={{ y: -2, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  className={`relative px-6 py-3 rounded-2xl text-sm font-medium transition-all duration-150 cursor-pointer ${
                     activeTab === tab.id
                       ? 'text-white bg-white/10'
                       : 'text-gray-500 hover:text-white hover:bg-white/5'
                   }`}
                 >
                   <span className="flex items-center gap-2.5">
-                    <span className="text-base">{tab.icon}</span>
+                    <motion.span 
+                      className="text-base"
+                      whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      {tab.icon}
+                    </motion.span>
                     <span>{tab.label}</span>
                   </span>
                   {activeTab === tab.id && (
                     <motion.div
                       layoutId="activeTab"
                       className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                     />
                   )}
                 </motion.button>
@@ -110,12 +127,20 @@ const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onL
 
           <div className="flex items-center space-x-4">
             {/* Plan Badge - Clickable to open pricing */}
-            <button
+            <motion.button
               onClick={onOpenPricing}
+              whileHover={{ y: -2, scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
               className={`hidden lg:flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r ${currentPlan.color} border ${currentPlan.borderColor} rounded-2xl transition-all duration-150 group cursor-pointer`}
               title={isStarter ? `${usageUsed}/${usageLimit} reviews used - Upgrade for unlimited` : 'Manage subscription'}
             >
-              <Crown className={`w-4 h-4 ${currentPlan.textColor} group-hover:scale-110 transition-transform duration-150`} />
+              <motion.div
+                whileHover={{ rotate: [0, -15, 15, -15, 0] }}
+                transition={{ duration: 0.5 }}
+              >
+                <Crown className={`w-4 h-4 ${currentPlan.textColor}`} />
+              </motion.div>
               <span className={`text-sm font-semibold ${currentPlan.textColor}`}>{currentPlan.label}</span>
               {isStarter && usageCount && (
                 <span className={`text-xs ${currentPlan.textColor} opacity-70`}>{usageCount}</span>
@@ -123,32 +148,58 @@ const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onL
               {isStarter && (
                 <span className={`text-xs ${currentPlan.dotColor} transition-colors duration-150`}>{currentPlan.upgradeText}</span>
               )}
-            </button>
+            </motion.button>
 
             {/* Notifications */}
-            <button className="relative p-3 rounded-2xl hover:bg-white/5 transition-all group">
-              <Bell className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            </button>
+            <motion.button 
+              className="relative p-3 rounded-2xl hover:bg-white/5 transition-all duration-150 group cursor-pointer"
+              whileHover={{ y: -2, scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            >
+              <motion.div
+                whileHover={{ rotate: [0, -20, 20, -20, 0] }}
+                transition={{ duration: 0.5 }}
+              >
+                <Bell className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors duration-150" />
+              </motion.div>
+              <motion.span 
+                className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+              />
+            </motion.button>
             
             {/* User Profile */}
-            <div className="flex items-center gap-3.5 px-4 py-2.5 bg-white/5 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group border border-white/0 hover:border-white/10">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center ring-2 ring-purple-500/20 group-hover:ring-purple-500/40 transition-all">
+            <motion.div 
+              className="flex items-center gap-3.5 px-4 py-2.5 bg-white/5 rounded-2xl hover:bg-white/10 transition-all duration-150 cursor-pointer group border border-white/0 hover:border-white/10"
+              whileHover={{ y: -2, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            >
+              <motion.div 
+                className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center ring-2 ring-purple-500/20 group-hover:ring-purple-500/40 transition-all duration-150"
+                whileHover={{ rotate: 360 }}
+                transition={{ duration: 0.6 }}
+              >
                 <span className="text-sm font-bold text-white">{user?.name?.[0]?.toUpperCase() || 'U'}</span>
-              </div>
+              </motion.div>
               <div className="hidden lg:block">
                 <p className="text-sm font-semibold text-white leading-none mb-1.5">{user?.name || 'User'}</p>
                 <p className="text-xs text-gray-600 leading-none">{currentPlan.label} member</p>
               </div>
-            </div>
+            </motion.div>
 
             {/* Logout */}
-            <button
+            <motion.button
               onClick={onLogout}
-              className="p-3 rounded-2xl hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all group"
+              whileHover={{ y: -2, scale: 1.1, rotate: 5 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+              className="p-3 rounded-2xl hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-150 group cursor-pointer"
             >
-              <LogOut className="w-5 h-5 text-gray-500 group-hover:text-red-400 transition-colors" />
-            </button>
+              <LogOut className="w-5 h-5 text-gray-500 group-hover:text-red-400 transition-colors duration-150" />
+            </motion.button>
           </div>
         </div>
       </div>
