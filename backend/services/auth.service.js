@@ -215,7 +215,7 @@ class AuthService {
 
     if (!user) {
       // Cache miss - query database (⚡ EXTREME: only fetch needed fields)
-      user = await User.findOne({ email }).select('_id name email password');
+      user = await User.findOne({ email }).select('_id name email password profilePhoto');
       
       if (!user) {
         const error = new Error('No account found with this email. Please sign up first.');
@@ -229,7 +229,7 @@ class AuthService {
       // ⚡ FIXED: Cache hit - we already have the user, just need password
       // Only query if cached user doesn't have password
       if (!user.password) {
-        user = await User.findOne({ email }).select('_id name email password');
+        user = await User.findOne({ email }).select('_id name email password profilePhoto');
         if (!user) {
           const error = new Error('No account found with this email. Please sign up first.');
           error.statusCode = 404;
@@ -261,7 +261,8 @@ class AuthService {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        profilePhoto: user.profilePhoto || null
       },
       token
     };

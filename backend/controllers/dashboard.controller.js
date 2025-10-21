@@ -270,6 +270,7 @@ exports.getLeaderboard = errorHandler(async (req, res) => {
         name: entry.user?.name || 'Anonymous',
         score: entry.score || 0,
         avatar: getAvatar(entry.user?.name, i),
+        profilePhoto: entry.user?.profilePhoto || null, // Add this line
         change: entry.rankChange > 0 ? `+${entry.rankChange}` : entry.rankChange < 0 ? `${entry.rankChange}` : '',
         highlight: isCurrentUser
       };
@@ -282,6 +283,7 @@ exports.getLeaderboard = errorHandler(async (req, res) => {
         name: 'you',
         score: currentUserEntry.score,
         avatar: '⭐',
+        profilePhoto: req.user?.profilePhoto || null, // Add this line
         change: currentUserEntry.rankChange > 0 ? `+${currentUserEntry.rankChange}` : currentUserEntry.rankChange < 0 ? `${currentUserEntry.rankChange}` : '',
         highlight: true
       });
