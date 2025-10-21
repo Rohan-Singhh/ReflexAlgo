@@ -277,7 +277,7 @@ class AuthService {
 
     // Cache miss - query database (only fetch needed fields!)
     const user = await User.findById(userId)
-      .select('_id name email') // ⚡ EXTREME: 30-50% faster query
+      .select('_id name email profilePhoto') // ⚡ EXTREME: 30-50% faster query
       .lean(); // .lean() for speed
     
     if (!user) {
@@ -322,6 +322,26 @@ class AuthService {
 
   clearTokenCache(token) {
     tokenCache.delete(token);
+  }
+
+  // Update profile photo
+  async updateProfilePhoto(userId, profilePhoto) {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { profilePhoto },
+      { new: true, select: '_id name email profilePhoto' }
+    ).lean();
+
+    if (!user) {
+      const error = new Error('User not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Clear cache for this user
+    this.clearUserCache(user.email, userId);
+
+    return user;
   }
 
   getCacheStats() {

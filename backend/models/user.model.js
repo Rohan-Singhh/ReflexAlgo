@@ -27,6 +27,11 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },
+  profilePhoto: {
+    type: String,
+    default: null,
+    trim: true
+  },
   subscription: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Subscription'

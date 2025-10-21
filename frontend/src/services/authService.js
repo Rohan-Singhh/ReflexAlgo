@@ -39,6 +39,16 @@ export const authService = {
     return response.data;
   },
 
+  // Update profile photo
+  updateProfilePhoto: async (profilePhoto) => {
+    const response = await api.put('/auth/profile-photo', { profilePhoto });
+    if (response.data.success) {
+      const { user } = response.data.data;
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+    return response.data;
+  },
+
   // Check if user is authenticated
   isAuthenticated: () => {
     return !!localStorage.getItem('token');

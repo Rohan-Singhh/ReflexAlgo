@@ -42,7 +42,18 @@ const LeaderboardItem = memo(({ user, index, isCompact = false }) => {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xl">{user.avatar}</span>
+          {/* Profile Photo or Avatar */}
+          {user.profilePhoto ? (
+            <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-purple-500/30">
+              <img 
+                src={user.profilePhoto} 
+                alt={user.name} 
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <span className="text-xl">{user.avatar}</span>
+          )}
           <p className={`font-semibold truncate ${user.highlight ? 'text-white' : 'text-gray-300'}`}>
             {user.name}
           </p>
@@ -454,8 +465,16 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
               >
                 <div className="flex flex-col items-center">
                   <div className="relative mb-3">
-                    <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-2xl">{topThree[1]?.avatar || '⭐'}</span>
+                    <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                      {topThree[1]?.profilePhoto ? (
+                        <img 
+                          src={topThree[1].profilePhoto} 
+                          alt={topThree[1].name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-2xl">{topThree[1]?.avatar || '⭐'}</span>
+                      )}
                     </div>
                     <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
                       2
@@ -477,8 +496,16 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                 <div className="absolute inset-0 bg-gradient-to-t from-yellow-500/5 to-transparent" />
                 <div className="relative flex flex-col items-center">
                   <div className="relative mb-3">
-                    <div className="w-20 h-20 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center shadow-xl shadow-yellow-500/30">
-                      <span className="text-3xl">{topThree[0]?.avatar || '👑'}</span>
+                    <div className="w-20 h-20 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center shadow-xl shadow-yellow-500/30 overflow-hidden">
+                      {topThree[0]?.profilePhoto ? (
+                        <img 
+                          src={topThree[0].profilePhoto} 
+                          alt={topThree[0].name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-3xl">{topThree[0]?.avatar || '👑'}</span>
+                      )}
                     </div>
                     <div className="absolute -top-1 -right-1 w-7 h-7 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full flex items-center justify-center text-sm font-bold text-white">
                       1
@@ -500,8 +527,16 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
               >
                 <div className="flex flex-col items-center">
                   <div className="relative mb-3">
-                    <div className="w-16 h-16 bg-gradient-to-br from-orange-600 to-orange-800 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-2xl">{topThree[2]?.avatar || '🥉'}</span>
+                    <div className="w-16 h-16 bg-gradient-to-br from-orange-600 to-orange-800 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                      {topThree[2]?.profilePhoto ? (
+                        <img 
+                          src={topThree[2].profilePhoto} 
+                          alt={topThree[2].name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-2xl">{topThree[2]?.avatar || '🥉'}</span>
+                      )}
                     </div>
                     <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-orange-600 to-orange-800 rounded-full flex items-center justify-center text-xs font-bold text-white">
                       3
@@ -546,7 +581,18 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
 
                 {/* User Info */}
                 <div className="flex-1 flex items-center gap-3 min-w-0">
-                  <span className="text-2xl flex-shrink-0">{user.avatar}</span>
+                  {/* Profile Photo or Avatar */}
+                  {user.profilePhoto ? (
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden ring-2 ring-purple-500/30">
+                      <img 
+                        src={user.profilePhoto} 
+                        alt={user.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-2xl flex-shrink-0">{user.avatar}</span>
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className={`font-semibold truncate ${user.highlight ? 'text-white' : 'text-gray-200'}`}>
                       {user.name}

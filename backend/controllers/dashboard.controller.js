@@ -245,7 +245,7 @@ exports.getLeaderboard = errorHandler(async (req, res) => {
       Leaderboard.countDocuments({ period }),
       // ⚡ OPTIMIZATION 2: Minimal field selection + lean for speed
       Leaderboard.find({ period })
-        .populate('user', 'name') // Only get name, not entire user object
+        .populate('user', 'name profilePhoto') // Only get name and profilePhoto, not entire user object
         .select('rank score rankChange user') // Only fields we need
         .sort({ rank: 1 })
         .skip(skip)

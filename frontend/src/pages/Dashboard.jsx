@@ -14,6 +14,7 @@ const DashboardContent = lazy(() => import('./Dashboard/DashboardContent'));
 const PricingModal = lazy(() => import('./Dashboard/PricingModal'));
 const CodeUpload = lazy(() => import('./Dashboard/CodeUpload'));
 const AutoRefresh = lazy(() => import('./Dashboard/AutoRefresh'));
+const ProfilePhotoModal = lazy(() => import('./Dashboard/ProfilePhotoModal'));
 
 // ⚡ OPTIMIZATION: Simple in-memory cache with TTL
 const dashboardCache = {
@@ -42,6 +43,7 @@ const Dashboard = memo(() => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [allReviews, setAllReviews] = useState([]);
@@ -274,6 +276,11 @@ const Dashboard = memo(() => {
           setActiveTab={setActiveTab}
           onLogout={handleLogout}
           onOpenPricing={() => setIsPricingOpen(true)}
+          onOpenPhotoModal={() => setIsPhotoModalOpen(true)}
+          onUserUpdate={(updatedUser) => {
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }}
         />
       </Suspense>
 
@@ -362,6 +369,22 @@ const Dashboard = memo(() => {
               setIsPricingOpen(true);
             }}
             subscription={subscription}
+          />
+        )}
+      </Suspense>
+
+      {/* Profile Photo Modal */}
+      <Suspense fallback={null}>
+        {isPhotoModalOpen && (
+          <ProfilePhotoModal
+            isOpen={isPhotoModalOpen}
+            onClose={() => setIsPhotoModalOpen(false)}
+            currentPhoto={user?.profilePhoto}
+            onPhotoUpdated={(newPhoto) => {
+              const updatedUser = { ...user, profilePhoto: newPhoto };
+              setUser(updatedUser);
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+            }}
           />
         )}
       </Suspense>

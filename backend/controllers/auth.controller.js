@@ -92,6 +92,47 @@ class AuthController {
     }
   }
 
+  // Update profile photo
+  async updateProfilePhoto(req, res, next) {
+    try {
+      const { profilePhoto } = req.body;
+      const userId = req.user._id;
+
+      if (!profilePhoto) {
+        return res.status(400).json({
+          success: false,
+          message: 'Profile photo is required'
+        });
+      }
+
+      // Validate base64 image (basic check)
+      if (!profilePhoto.startsWith('data:image/')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid image format'
+        });
+      }
+
+      // Check size (limit to 2MB base64)
+      if (profilePhoto.length > 2 * 1024 * 1024) {
+        return res.status(400).json({
+          success: false,
+          message: 'Image too large. Maximum size is 2MB'
+        });
+      }
+
+      const updatedUser = await authService.updateProfilePhoto(userId, profilePhoto);
+
+      res.status(200).json({
+        success: true,
+        message: 'Profile photo updated successfully',
+        data: { user: updatedUser }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // Get cache stats (for monitoring/debugging)
   async getCacheStats(req, res) {
     try {
