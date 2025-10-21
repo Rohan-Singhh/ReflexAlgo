@@ -82,7 +82,8 @@ const errorHandler = (err, req, res, next) => {
   // ⚡ OPTIMIZED: Conditional object creation
   const response = {
     success: false,
-    error: finalMessage
+    message: finalMessage,  // Frontend expects 'message' field
+    error: finalMessage     // Keep for backwards compatibility
   };
 
   if (IS_DEV) {

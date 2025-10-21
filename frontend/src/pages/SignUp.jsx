@@ -1,20 +1,29 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowRight, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, Mail, Lock, User, AlertCircle, CheckCircle, LogIn, X } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Button from '../components/ui/Button';
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: ''
   });
+
+  // Pre-fill email if coming from login page
+  useEffect(() => {
+    if (location.state?.email) {
+      setFormData(prev => ({ ...prev, email: location.state.email }));
+    }
+  }, [location.state]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const handleBackgroundClick = (e) => {
     // Only navigate if clicking directly on the background, not on children
@@ -115,10 +124,20 @@ const SignUp = () => {
       }, 400);
 
     } catch (error) {
-      setErrors({ submit: error.message });
+      // Check if error is "already registered"
+      if (error.message.toLowerCase().includes('already registered')) {
+        setShowLoginModal(true);
+      } else {
+        setErrors({ submit: error.message });
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLoginRedirect = () => {
+    // Pre-fill email in login page
+    navigate('/login', { state: { email: formData.email } });
   };
 
   return (
@@ -313,6 +332,79 @@ const SignUp = () => {
           <a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</a>
         </p>
       </motion.div>
+
+      {/* Login Modal */}
+      <AnimatePresence>
+        {showLoginModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 cursor-pointer"
+            onClick={() => setShowLoginModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl p-8 max-w-md w-full relative shadow-2xl cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Icon */}
+              <div className="flex justify-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center">
+                  <LogIn className="w-8 h-8 text-white" />
+                </div>
+              </div>
+
+              {/* Title */}
+              <h2 className="text-2xl font-bold text-white text-center mb-3">
+                Account Already Exists
+              </h2>
+
+              {/* Description */}
+              <p className="text-gray-400 text-center mb-2">
+                Good news! An account with{' '}
+                <span className="text-green-400 font-semibold">{formData.email}</span>
+                {' '}already exists.
+              </p>
+              <p className="text-gray-400 text-center mb-8">
+                Would you like to login instead?
+              </p>
+
+              {/* Actions */}
+              <div className="space-y-3">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full group"
+                  onClick={handleLoginRedirect}
+                >
+                  <LogIn className="w-5 h-5 mr-2" />
+                  Login to Your Account
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+
+                <button
+                  onClick={() => setShowLoginModal(false)}
+                  className="w-full py-3 text-gray-400 hover:text-white transition-colors text-sm cursor-pointer"
+                >
+                  Try Different Email
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

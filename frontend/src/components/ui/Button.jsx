@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { memo } from 'react';
 
 const Button = memo(({ children, variant = 'primary', size = 'md', className = '', ...props }) => {
-  const baseStyles = 'inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group';
+  const baseStyles = 'inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group';
   
   const variants = {
     primary: 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-purple-500/50',

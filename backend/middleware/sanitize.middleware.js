@@ -4,15 +4,15 @@ const { body, validationResult } = require('express-validator');
 const NAME_REGEX = /^[a-zA-Z\s]+$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
 
-// ⚡ OPTIMIZED: Reuse error messages
-const NAME_REQUIRED = 'Name is required';
+// ⚡ OPTIMIZED: Reuse error messages (User-friendly)
+const NAME_REQUIRED = 'Please enter your name';
 const NAME_LENGTH = 'Name must be between 2 and 50 characters';
-const NAME_FORMAT = 'Name can only contain letters and spaces';
-const EMAIL_REQUIRED = 'Email is required';
-const EMAIL_INVALID = 'Please provide a valid email';
-const PASSWORD_REQUIRED = 'Password is required';
-const PASSWORD_LENGTH = 'Password must be at least 6 characters';
-const PASSWORD_FORMAT = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+const NAME_FORMAT = 'Name can only contain letters and spaces (no numbers or special characters)';
+const EMAIL_REQUIRED = 'Please enter your email address';
+const EMAIL_INVALID = 'Please enter a valid email address (e.g., user@example.com)';
+const PASSWORD_REQUIRED = 'Please enter your password';
+const PASSWORD_LENGTH = 'Password must be at least 6 characters long';
+const PASSWORD_FORMAT = 'Password must include: uppercase letter, lowercase letter, and a number';
 
 // Validation rules for registration
 const validateRegister = [

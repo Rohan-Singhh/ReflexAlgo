@@ -97,30 +97,42 @@ class AuthService {
     const { name, email, password } = userData;
 
     if (!name || !email || !password) {
-      throw new Error('Please provide name, email and password');
+      const error = new Error('All fields are required. Please fill in your name, email, and password.');
+      error.statusCode = 400;
+      throw error;
     }
 
     const nameLen = name.length;
     if (nameLen < 2 || nameLen > 50) {
-      throw new Error('Name must be between 2 and 50 characters');
+      const error = new Error('Name must be between 2 and 50 characters long.');
+      error.statusCode = 400;
+      throw error;
     }
 
     if (!EMAIL_REGEX.test(email)) {
-      throw new Error('Please provide a valid email');
+      const error = new Error('Please enter a valid email address (e.g., user@example.com).');
+      error.statusCode = 400;
+      throw error;
     }
 
     if (password.length < 6) {
-      throw new Error('Password must be at least 6 characters');
+      const error = new Error('Password must be at least 6 characters long for security.');
+      error.statusCode = 400;
+      throw error;
     }
   }
 
   validateLoginData(email, password) {
     if (!email || !password) {
-      throw new Error('Please provide email and password');
+      const error = new Error('Please enter both your email and password.');
+      error.statusCode = 400;
+      throw error;
     }
 
     if (!EMAIL_REGEX.test(email)) {
-      throw new Error('Please provide a valid email');
+      const error = new Error('Please enter a valid email address.');
+      error.statusCode = 400;
+      throw error;
     }
   }
 
@@ -130,9 +142,13 @@ class AuthService {
     const { name, email, password } = userData;
 
     const registrationPromise = this._performRegistration(name, email, password);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Registration timeout - please try again')), REGISTRATION_TIMEOUT)
-    );
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        const error = new Error('Registration is taking longer than expected. Please try again in a moment.');
+        error.statusCode = 408;
+        reject(error);
+      }, REGISTRATION_TIMEOUT);
+    });
 
     return await Promise.race([registrationPromise, timeoutPromise]);
   }
@@ -145,7 +161,9 @@ class AuthService {
     ]);
 
     if (existingUser) {
-      throw new Error('Email already registered');
+      const error = new Error('This email is already registered. Please login or use a different email.');
+      error.statusCode = 409;
+      throw error;
     }
 
     const user = await User.create({
@@ -177,9 +195,13 @@ class AuthService {
     this.validateLoginData(email, password);
 
     const loginPromise = this._performLogin(email, password);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Login timeout - please try again')), LOGIN_TIMEOUT)
-    );
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        const error = new Error('Login is taking longer than expected. Please check your connection and try again.');
+        error.statusCode = 408;
+        reject(error);
+      }, LOGIN_TIMEOUT);
+    });
 
     return await Promise.race([loginPromise, timeoutPromise]);
   }
@@ -193,7 +215,9 @@ class AuthService {
       user = await User.findOne({ email }).select('_id name email password');
       
       if (!user) {
-        throw new Error('Invalid email or password');
+        const error = new Error('No account found with this email. Please sign up first.');
+        error.statusCode = 404;
+        throw error;
       }
 
       // Cache the user
@@ -204,7 +228,9 @@ class AuthService {
       if (!user.password) {
         user = await User.findOne({ email }).select('_id name email password');
         if (!user) {
-          throw new Error('Invalid email or password');
+          const error = new Error('No account found with this email. Please sign up first.');
+          error.statusCode = 404;
+          throw error;
         }
       }
     }
@@ -216,7 +242,9 @@ class AuthService {
     ]);
 
     if (!isPasswordValid) {
-      throw new Error('Invalid email or password');
+      const error = new Error('Incorrect password. Please check and try again.');
+      error.statusCode = 401;
+      throw error;
     }
 
     return {

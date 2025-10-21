@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowRight, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, Mail, Lock, AlertCircle, CheckCircle, UserPlus, X, ShieldAlert } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Button from '../components/ui/Button';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -13,6 +14,15 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+  // Pre-fill email if coming from signup page
+  useEffect(() => {
+    if (location.state?.email) {
+      setFormData(prev => ({ ...prev, email: location.state.email }));
+    }
+  }, [location.state]);
 
   const handleBackgroundClick = (e) => {
     // Only navigate if clicking directly on the background, not on children
@@ -98,10 +108,32 @@ const Login = () => {
       }, 300);
 
     } catch (error) {
-      setErrors({ submit: error.message });
+      // Check error type and show appropriate modal
+      if (error.message.toLowerCase().includes('no account found')) {
+        setShowSignupModal(true);
+      } else if (error.message.toLowerCase().includes('incorrect password')) {
+        setShowPasswordModal(true);
+      } else {
+        setErrors({ submit: error.message });
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSignupRedirect = () => {
+    // Pre-fill email in signup page
+    navigate('/signup', { state: { email: formData.email } });
+  };
+
+  const handlePasswordModalClose = () => {
+    setShowPasswordModal(false);
+    // Clear password field for retry
+    setFormData(prev => ({ ...prev, password: '' }));
+    // Focus password field
+    setTimeout(() => {
+      document.getElementById('password')?.focus();
+    }, 100);
   };
 
   return (
@@ -279,6 +311,198 @@ const Login = () => {
           ← Back to Home
         </Link>
       </motion.div>
+
+      {/* Incorrect Password Modal */}
+      <AnimatePresence>
+        {showPasswordModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 cursor-pointer"
+            onClick={handlePasswordModalClose}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: 20, rotateX: -15 }}
+              animate={{ 
+                scale: 1, 
+                opacity: 1, 
+                y: 0,
+                rotateX: 0
+              }}
+              exit={{ 
+                scale: 0.8, 
+                opacity: 0, 
+                y: 20,
+                rotateX: 15
+              }}
+              transition={{ 
+                type: "spring", 
+                damping: 25,
+                stiffness: 300,
+                duration: 0.4
+              }}
+              className="bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl p-8 max-w-md w-full relative shadow-2xl cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={handlePasswordModalClose}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Animated Icon with shake effect */}
+              <motion.div 
+                className="flex justify-center mb-6"
+                initial={{ rotate: 0 }}
+                animate={{ 
+                  rotate: [0, -10, 10, -10, 10, 0],
+                  scale: [1, 1.1, 1.1, 1.1, 1.1, 1]
+                }}
+                transition={{ 
+                  duration: 0.6,
+                  delay: 0.2
+                }}
+              >
+                <div className="w-16 h-16 bg-gradient-to-br from-red-600 to-orange-600 rounded-full flex items-center justify-center relative">
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-red-500"
+                    animate={{ 
+                      scale: [1, 1.2, 1],
+                      opacity: [0.5, 0, 0.5]
+                    }}
+                    transition={{ 
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                  <ShieldAlert className="w-8 h-8 text-white relative z-10" />
+                </div>
+              </motion.div>
+
+              {/* Title with stagger animation */}
+              <motion.h2 
+                className="text-2xl font-bold text-white text-center mb-3"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                Incorrect Password
+              </motion.h2>
+
+              {/* Description */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <p className="text-gray-400 text-center mb-2">
+                  The password you entered for{' '}
+                  <span className="text-red-400 font-semibold">{formData.email}</span>
+                  {' '}is incorrect.
+                </p>
+                <p className="text-gray-400 text-center mb-8">
+                  Please check your password and try again.
+                </p>
+              </motion.div>
+
+              {/* Actions with stagger */}
+              <motion.div 
+                className="space-y-3"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full group"
+                  onClick={handlePasswordModalClose}
+                >
+                  <Lock className="w-5 h-5 mr-2" />
+                  Try Again
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Signup Modal */}
+      <AnimatePresence>
+        {showSignupModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 cursor-pointer"
+            onClick={() => setShowSignupModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl p-8 max-w-md w-full relative shadow-2xl cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setShowSignupModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Icon */}
+              <div className="flex justify-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-full flex items-center justify-center">
+                  <UserPlus className="w-8 h-8 text-white" />
+                </div>
+              </div>
+
+              {/* Title */}
+              <h2 className="text-2xl font-bold text-white text-center mb-3">
+                Account Not Found
+              </h2>
+
+              {/* Description */}
+              <p className="text-gray-400 text-center mb-2">
+                We couldn't find an account with{' '}
+                <span className="text-purple-400 font-semibold">{formData.email}</span>
+              </p>
+              <p className="text-gray-400 text-center mb-8">
+                Would you like to create a new account?
+              </p>
+
+              {/* Actions */}
+              <div className="space-y-3">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full group"
+                  onClick={handleSignupRedirect}
+                >
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Create Account
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+
+                <button
+                  onClick={() => setShowSignupModal(false)}
+                  className="w-full py-3 text-gray-400 hover:text-white transition-colors text-sm cursor-pointer"
+                >
+                  Try Different Email
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
