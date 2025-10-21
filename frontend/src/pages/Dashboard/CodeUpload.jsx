@@ -29,14 +29,18 @@ const AnalyzingSteps = [
   { icon: Sparkles, text: 'generating optimizations...', color: 'text-emerald-400' },
 ];
 
+// ⚡ SUPER FAST ANIMATION PRESETS
+const INSTANT = { duration: 0.08, ease: "easeOut" };
+const FAST = { duration: 0.12, ease: "easeOut" };
+
 const CodeUpload = ({ onSubmit, onClose }) => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: Language, 2: Method, 3: Code Input, 4: Analyzing, 5: Results
+  const [step, setStep] = useState(1);
   const [language, setLanguage] = useState('');
-  const [method, setMethod] = useState(''); // 'paste' or 'upload'
+  const [method, setMethod] = useState('');
   const [code, setCode] = useState('');
   const [title, setTitle] = useState('');
-  const [file, setFile] = useState(null);
+  const [file, setFile] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState('');
   
@@ -47,12 +51,12 @@ const CodeUpload = ({ onSubmit, onClose }) => {
   const [reviewResult, setReviewResult] = useState(null);
   const [copiedCode, setCopiedCode] = useState(false);
 
-  // Animate through analyzing steps (faster)
+  // Animate through analyzing steps (super fast)
   useEffect(() => {
     if (isAnalyzing) {
       const interval = setInterval(() => {
         setCurrentAnalyzingStep(prev => (prev + 1) % AnalyzingSteps.length);
-      }, 800); // Faster: 800ms instead of 1500ms
+      }, 500); // Ultra fast
       return () => clearInterval(interval);
     }
   }, [isAnalyzing]);
@@ -60,89 +64,59 @@ const CodeUpload = ({ onSubmit, onClose }) => {
   // Poll for review completion
   useEffect(() => {
     if (reviewId && isAnalyzing) {
-      console.log('🔄 Starting polling for review:', reviewId);
-      console.log('🔄 isAnalyzing:', isAnalyzing);
-      
-      // Start polling immediately, then every second
       const pollOnce = async () => {
         try {
-          console.log('📡 Polling...');
           const result = await codeReviewService.getReviewDetails(reviewId);
-          console.log('📥 Poll result:', {
-            status: result.data.status,
-            hasAnalysis: !!result.data.analysis,
-            reviewId: result.data._id
-          });
-          
-          // Check for completed status (case-insensitive)
           const status = result.data.status?.toLowerCase();
           
           if (status === 'completed') {
-            console.log('✅ REVIEW COMPLETED! Showing results...');
-            console.log('📊 Analysis data:', result.data.analysis);
             setReviewResult(result.data);
             setIsAnalyzing(false);
-            setStep(5); // Move to results step
-            return true; // Stop polling
+            setStep(5);
+            return true;
           } else if (status === 'failed') {
-            console.log('❌ Review failed');
             setError('Analysis failed. Please try again.');
             setIsAnalyzing(false);
             setStep(3);
-            return true; // Stop polling
-          } else {
-            console.log('⏳ Still analyzing, status:', status);
-            return false; // Continue polling
+            return true;
           }
+          return false;
         } catch (err) {
-          console.error('❌ Poll error:', err);
-          console.error('Error details:', err.response || err.message);
-          return false; // Continue polling despite error
+          return false;
         }
       };
 
-      // Poll immediately
       pollOnce();
-      
-      // Then poll every 1.5 seconds (reduced frequency)
       const pollInterval = setInterval(async () => {
         const shouldStop = await pollOnce();
-        if (shouldStop) {
-          console.log('🛑 Polling stopped - review complete!');
-          clearInterval(pollInterval);
-        }
+        if (shouldStop) clearInterval(pollInterval);
       }, 1500);
 
-      return () => {
-        console.log('🛑 Stopping polling');
-        clearInterval(pollInterval);
-      };
-    } else {
-      if (!reviewId) console.log('⚠️ No reviewId set');
-      if (!isAnalyzing) console.log('⚠️ Not analyzing');
+      return () => clearInterval(pollInterval);
     }
   }, [reviewId, isAnalyzing]);
 
   const handleLanguageSelect = (lang) => {
     setLanguage(lang);
-    setStep(2);
+    setTimeout(() => setStep(2), 100); // Instant transition
   };
 
   const handleMethodSelect = (selectedMethod) => {
     setMethod(selectedMethod);
-    setStep(3);
+    setTimeout(() => setStep(3), 100); // Instant transition
   };
 
-  const handleFileUpload = (selectedFile) => {
-    if (!selectedFile) return;
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setCode(e.target.result);
-      setFile(selectedFile);
-      setTitle(selectedFile.name.replace(/\.[^/.]+$/, ''));
-    };
-    reader.readAsText(selectedFile);
+  const handleFileUpload = (e) => {
+    const uploadedFile = e.target.files?.[0];
+    if (uploadedFile) {
+      setFile(uploadedFile.name);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCode(event.target?.result || '');
+        if (!title) setTitle(uploadedFile.name.replace(/\.[^/.]+$/, ""));
+      };
+      reader.readAsText(uploadedFile);
+    }
   };
 
   const handleDragOver = (e) => {
@@ -157,28 +131,30 @@ const CodeUpload = ({ onSubmit, onClose }) => {
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    const droppedFile = e.dataTransfer.files[0];
-    handleFileUpload(droppedFile);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      setFile(droppedFile.name);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCode(event.target?.result || '');
+        if (!title) setTitle(droppedFile.name.replace(/\.[^/.]+$/, ""));
+      };
+      reader.readAsText(droppedFile);
+    }
   };
 
   const handleSubmit = async () => {
-    if (!title.trim()) {
-      setError('Please enter a title');
-      return;
-    }
-    if (!code.trim()) {
-      setError('Please enter some code');
+    setError('');
+    if (!code.trim() || !title.trim()) {
+      setError('Please provide both title and code');
       return;
     }
 
-    const lineCount = code.split('\n').length;
-    
     try {
+      setStep(4);
       setIsAnalyzing(true);
-      setStep(4); // Move to analyzing step
-      setError('');
       
-      console.log('🚀 Submitting code...');
+      const lineCount = code.split('\n').length;
       const result = await onSubmit({
         title: title.trim(),
         language,
@@ -186,29 +162,18 @@ const CodeUpload = ({ onSubmit, onClose }) => {
         lineCount
       });
 
-      console.log('📦 Submit result:', result);
-      
-      // The backend returns { success: true, message: "...", data: { reviewId: "...", status: "..." } }
       const reviewIdFromResponse = result?.data?.reviewId;
-      
-      console.log('📋 Review ID:', reviewIdFromResponse);
-
       if (reviewIdFromResponse) {
         setReviewId(reviewIdFromResponse);
-        console.log('✅ Review ID set! Starting polling...');
-      } else {
-        console.error('❌ No review ID in response!');
-        console.log('Full response:', JSON.stringify(result, null, 2));
       }
     } catch (err) {
-      console.error('❌ Submit error:', err);
       setError('Failed to submit code. Please try again.');
       setIsAnalyzing(false);
       setStep(3);
     }
   };
 
-  const copyToClipboard = (text) => {
+  const handleCopyCode = (text) => {
     navigator.clipboard.writeText(text);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
@@ -216,7 +181,6 @@ const CodeUpload = ({ onSubmit, onClose }) => {
 
   const handleViewFullDetails = () => {
     if (reviewId) {
-      // Stop analyzing state before closing
       setIsAnalyzing(false);
       onClose();
       navigate(`/review/${reviewId}`);
@@ -224,13 +188,9 @@ const CodeUpload = ({ onSubmit, onClose }) => {
   };
 
   const handleClose = () => {
-    // Stop analyzing state when closing
     setIsAnalyzing(false);
-    
-    // Trigger dashboard refresh if we have a review
     if (reviewId && onClose) {
-      // Notify parent that we're closing so it can refresh
-      onClose(true); // Pass true to indicate refresh needed
+      onClose(true);
     } else {
       onClose();
     }
@@ -239,9 +199,10 @@ const CodeUpload = ({ onSubmit, onClose }) => {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 10 }}
+        transition={INSTANT}
         className="bg-[#0A0A0A] border border-white/10 rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl"
       >
         {/* Header */}
@@ -257,7 +218,7 @@ const CodeUpload = ({ onSubmit, onClose }) => {
           <button
             onClick={handleClose}
             disabled={isAnalyzing}
-            className={`p-2 hover:bg-white/10 rounded-xl transition-colors ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`p-2 hover:bg-white/10 rounded-xl transition-all duration-100 ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <X className="w-6 h-6 text-gray-400" />
           </button>
@@ -270,57 +231,76 @@ const CodeUpload = ({ onSubmit, onClose }) => {
             {step === 1 && (
               <motion.div
                 key="language"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={INSTANT}
               >
                 <h3 className="text-xl font-bold text-white mb-6">select programming language</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {LANGUAGES.map((lang) => (
-                    <motion.button
+                    <button
                       key={lang.value}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
                       onClick={() => handleLanguageSelect(lang.value)}
-                      className="p-6 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/50 rounded-2xl transition-all"
+                      className={`p-4 rounded-2xl border-2 transition-all duration-100 ${
+                        language === lang.value
+                          ? 'border-purple-500 bg-purple-500/10 scale-105'
+                          : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 hover:scale-105'
+                      }`}
                     >
-                      <div className="text-4xl mb-3">{lang.icon}</div>
-                      <p className="text-white font-semibold">{lang.label}</p>
-                    </motion.button>
+                      <div className="text-3xl mb-2">{lang.icon}</div>
+                      <div className="text-sm font-medium text-white">{lang.label}</div>
+                    </button>
                   ))}
                 </div>
               </motion.div>
             )}
 
-            {/* Step 2: Method Selection */}
+            {/* Step 2: Upload Method */}
             {step === 2 && (
               <motion.div
                 key="method"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={INSTANT}
               >
-                <h3 className="text-xl font-bold text-white mb-6">how do you want to provide your code?</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-white">how do you want to provide code?</h3>
+                  <button
+                    onClick={() => setStep(1)}
+                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors duration-100"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    back
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button
                     onClick={() => handleMethodSelect('paste')}
-                    className="p-8 bg-gradient-to-br from-purple-600/10 to-blue-600/10 border border-purple-500/30 rounded-3xl hover:border-purple-500/50 transition-all text-left"
+                    className={`p-8 rounded-2xl border-2 transition-all duration-100 text-left ${
+                      method === 'paste'
+                        ? 'border-purple-500 bg-purple-500/10 scale-105'
+                        : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 hover:scale-105'
+                    }`}
                   >
                     <Code2 className="w-12 h-12 text-purple-400 mb-4" />
-                    <h4 className="text-xl font-bold text-white mb-2">paste code</h4>
-                    <p className="text-gray-400">directly paste your code snippet</p>
-                  </motion.button>
+                    <h4 className="text-lg font-bold text-white mb-2">paste code</h4>
+                    <p className="text-sm text-gray-400">directly paste your code</p>
+                  </button>
 
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
+                  <button
                     onClick={() => handleMethodSelect('upload')}
-                    className="p-8 bg-gradient-to-br from-emerald-600/10 to-green-600/10 border border-emerald-500/30 rounded-3xl hover:border-emerald-500/50 transition-all text-left"
+                    className={`p-8 rounded-2xl border-2 transition-all duration-100 text-left ${
+                      method === 'upload'
+                        ? 'border-purple-500 bg-purple-500/10 scale-105'
+                        : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 hover:scale-105'
+                    }`}
                   >
-                    <FileCode className="w-12 h-12 text-emerald-400 mb-4" />
-                    <h4 className="text-xl font-bold text-white mb-2">upload file</h4>
-                    <p className="text-gray-400">upload a code file from your device</p>
-                  </motion.button>
+                    <FileCode className="w-12 h-12 text-blue-400 mb-4" />
+                    <h4 className="text-lg font-bold text-white mb-2">upload file</h4>
+                    <p className="text-sm text-gray-400">select file from computer</p>
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -329,373 +309,289 @@ const CodeUpload = ({ onSubmit, onClose }) => {
             {step === 3 && (
               <motion.div
                 key="input"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={INSTANT}
                 className="space-y-6"
               >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-white">
+                    {method === 'paste' ? 'paste your code' : 'upload your file'}
+                  </h3>
+                  <button
+                    onClick={() => setStep(2)}
+                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors duration-100"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    back
+                  </button>
+                </div>
+
+                {error && (
+                  <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                    <p className="text-sm text-red-400">{error}</p>
+                  </div>
+                )}
+
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">title</label>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                    title
+                  </label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g., Binary Search Implementation"
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors duration-100"
                   />
                 </div>
 
-                {method === 'paste' ? (
-                  <div>
-                    <label className="block text-sm font-semibold text-white mb-2">paste your code</label>
-                    <textarea
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      placeholder="Paste your code here..."
-                      rows={15}
-                      className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 font-mono text-sm"
-                    />
-                  </div>
-                ) : (
+                {method === 'upload' ? (
                   <div
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all ${
+                    className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-100 ${
                       isDragging
                         ? 'border-purple-500 bg-purple-500/10'
-                        : 'border-white/10 bg-white/5 hover:border-white/20'
+                        : 'border-white/20 bg-white/5 hover:border-white/30'
                     }`}
                   >
                     <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-white font-semibold mb-2">drag & drop your file here</p>
-                    <p className="text-gray-400 text-sm mb-4">or</p>
-                    <input
-                      type="file"
-                      accept=".js,.ts,.py,.java,.cpp,.c,.go,.rs,.rb,.php,.swift,.kt,.cs"
-                      onChange={(e) => handleFileUpload(e.target.files[0])}
-                      className="hidden"
-                      id="file-upload"
-                    />
-                    <label 
-                      htmlFor="file-upload"
-                      className="inline-flex items-center justify-center px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-semibold cursor-pointer transition-all"
-                    >
-                      <FileCode className="w-5 h-5 mr-2" />
-                      browse files
+                    <p className="text-white font-medium mb-2">
+                      {file || 'drag & drop your code file here'}
+                    </p>
+                    <p className="text-sm text-gray-400 mb-4">or</p>
+                    <label className="inline-flex items-center px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl cursor-pointer transition-all duration-100 hover:scale-105">
+                      <span className="text-white font-medium">browse files</span>
+                      <input
+                        type="file"
+                        onChange={handleFileUpload}
+                        accept=".js,.jsx,.ts,.tsx,.py,.java,.cpp,.c,.go,.rs,.rb,.php,.swift,.kt,.cs"
+                        className="hidden"
+                      />
                     </label>
-                    {file && (
-                      <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-                        <p className="text-emerald-400 text-sm">✓ {file.name} loaded</p>
-                      </div>
-                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      your code
+                    </label>
+                    <textarea
+                      value={code}
+                      onChange={(e) => setCode(e.target.value)}
+                      placeholder="Paste your code here..."
+                      rows={12}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 font-mono text-sm resize-none transition-colors duration-100"
+                    />
                   </div>
                 )}
 
-                {error && (
-                  <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-red-400 text-sm">{error}</p>
-                  </div>
-                )}
+                <div className="flex gap-4 pt-4">
+                  <Button
+                    onClick={handleSubmit}
+                    variant="primary"
+                    size="lg"
+                    className="flex-1"
+                    disabled={!code.trim() || !title.trim()}
+                  >
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    analyze code
+                  </Button>
+                </div>
               </motion.div>
             )}
 
             {/* Step 4: Analyzing */}
-            {step === 4 && (
+            {step === 4 && isAnalyzing && (
               <motion.div
                 key="analyzing"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={INSTANT}
+                className="flex flex-col items-center justify-center py-16 space-y-8"
               >
-                {/* Animated Loading Orb - Faster & More Dynamic */}
-                <div className="text-center py-6">
+                {/* Animated Orb */}
+                <div className="relative w-32 h-32">
                   <motion.div
-                    animate={{ 
-                      rotate: 360,
-                      scale: [1, 1.1, 1]
-                    }}
-                    transition={{ 
-                      rotate: { duration: 1.5, repeat: Infinity, ease: "linear" },
-                      scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                    }}
-                    className="relative w-20 h-20 mx-auto mb-4"
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.1, 0.3] }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 blur-xl"
+                  />
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0 rounded-full bg-gradient-to-tr from-purple-600 via-blue-500 to-cyan-400 p-1"
                   >
-                    {/* Multi-layer glowing effect */}
-                    <motion.div 
-                      animate={{ opacity: [0.3, 0.6, 0.3] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      className="absolute inset-0 bg-gradient-to-r from-purple-500 via-blue-500 to-pink-500 rounded-full blur-2xl"
-                    />
-                    <div className="absolute inset-0 border-2 border-purple-500/20 rounded-full"></div>
-                    <div className="absolute inset-0 border-2 border-t-purple-500 border-r-blue-500 border-transparent rounded-full"></div>
-                    <Sparkles className="absolute inset-0 m-auto w-8 h-8 text-white" />
+                    <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
+                      <Brain className="w-14 h-14 text-purple-400" />
+                    </div>
                   </motion.div>
-                  <motion.h3 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-xl font-bold text-white mb-1"
-                  >
-                    AI is analyzing...
-                  </motion.h3>
-                  <motion.p 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className="text-gray-400 text-sm"
-                  >
-                    hang tight, almost there ⚡
-                  </motion.p>
                 </div>
 
-                {/* Analyzing Steps - Faster & Cleaner */}
-                <div className="space-y-3">
-                  {AnalyzingSteps.map((stepInfo, index) => {
-                    const Icon = stepInfo.icon;
-                    const isActive = index === currentAnalyzingStep;
-                    const isPast = index < currentAnalyzingStep;
-                    
+                {/* Progress Steps */}
+                <div className="space-y-3 w-full max-w-md">
+                  {AnalyzingSteps.map((stepItem, index) => {
+                    const Icon = stepItem.icon;
+                    const isCurrentStep = index === currentAnalyzingStep;
+                    const isPastStep = index < currentAnalyzingStep;
+
                     return (
-                      <motion.div
+                      <div
                         key={index}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ 
-                          opacity: isActive ? 1 : isPast ? 0.6 : 0.3,
-                          x: 0,
-                        }}
-                        transition={{ duration: 0.15 }}
-                        className={`flex items-center gap-3 p-4 rounded-xl border ${
-                          isActive 
-                            ? 'bg-white/10 border-white/20 shadow-lg shadow-purple-500/10' 
-                            : 'bg-white/5 border-white/5'
+                        className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-100 ${
+                          isCurrentStep
+                            ? 'border-purple-500/50 bg-purple-500/10 scale-105'
+                            : isPastStep
+                            ? 'border-green-500/30 bg-green-500/5'
+                            : 'border-white/5 bg-white/5'
                         }`}
                       >
-                        <motion.div 
-                          animate={isActive ? { scale: [1, 1.2, 1] } : {}}
-                          transition={{ duration: 0.8, repeat: Infinity }}
-                          className={`p-2.5 rounded-lg ${
-                            isActive ? 'bg-purple-600/30' : 'bg-white/5'
+                        <div
+                          className={`p-2 rounded-xl transition-all duration-100 ${
+                            isCurrentStep ? 'bg-purple-500/20 scale-110' : isPastStep ? 'bg-green-500/20' : 'bg-white/5'
                           }`}
                         >
-                          <Icon className={`w-5 h-5 ${isActive ? stepInfo.color : 'text-gray-600'}`} />
-                        </motion.div>
-                        <p className={`text-sm font-semibold flex-1 ${
-                          isActive ? 'text-white' : 'text-gray-500'
-                        }`}>
-                          {stepInfo.text}
-                        </p>
-                        {isPast && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", stiffness: 300 }}
-                          >
-                            <Check className="w-4 h-4 text-emerald-400" />
-                          </motion.div>
-                        )}
-                        {isActive && (
-                          <motion.div 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex gap-1"
-                          >
-                            <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '100ms' }} />
-                            <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
-                          </motion.div>
-                        )}
-                      </motion.div>
+                          {isPastStep ? (
+                            <Check className="w-5 h-5 text-green-400" />
+                          ) : (
+                            <Icon className={`w-5 h-5 ${isCurrentStep ? stepItem.color : 'text-gray-600'}`} />
+                          )}
+                        </div>
+                        <span className={`text-sm font-medium ${isCurrentStep ? 'text-white' : isPastStep ? 'text-green-400' : 'text-gray-600'}`}>
+                          {stepItem.text}
+                        </span>
+                      </div>
                     );
                   })}
                 </div>
-                
+
                 {/* Progress Bar */}
-                <div className="relative h-1 bg-white/5 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: "0%" }}
-                    animate={{ width: "100%" }}
-                    transition={{ duration: 10, ease: "linear" }}
-                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 via-blue-500 to-emerald-500"
-                  />
+                <div className="w-full max-w-md">
+                  <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: '0%' }}
+                      animate={{ width: `${((currentAnalyzingStep + 1) / AnalyzingSteps.length) * 100}%` }}
+                      transition={FAST}
+                      className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 text-center">usually takes 3-8 seconds</p>
                 </div>
-                
-                <p className="text-center text-xs text-gray-500">
-                  typically completes in 5-10 seconds
-                </p>
               </motion.div>
             )}
 
-            {/* Step 5: Results Preview - Faster entrance */}
+            {/* Step 5: Results */}
             {step === 5 && reviewResult && (
               <motion.div
                 key="results"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={INSTANT}
                 className="space-y-6"
               >
                 {/* Success Header */}
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                  className="text-center py-4"
-                >
-                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-full">
-                    <Check className="w-5 h-5 text-emerald-400" />
-                    <span className="text-emerald-400 font-bold">analysis complete!</span>
-                    <Sparkles className="w-5 h-5 text-emerald-400" />
+                <div className="text-center pb-6 border-b border-white/10">
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-8 h-8 text-green-400" />
                   </div>
-                </motion.div>
+                  <h3 className="text-2xl font-bold text-white mb-2">analysis complete!</h3>
+                  <p className="text-gray-400">AI has analyzed your code and found optimizations</p>
+                </div>
 
-                {/* Stats Cards */}
+                {/* Quick Stats */}
                 <div className="grid grid-cols-3 gap-4">
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1, duration: 0.2 }}
-                    className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-2xl p-5 hover:border-white/20 transition-all"
-                  >
-                    <p className="text-xs text-gray-500 mb-2">time complexity</p>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="px-2 py-1 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg font-mono">
-                        {reviewResult.analysis?.timeComplexity?.before || 'O(n)'}
-                      </span>
-                      <TrendingUp className="w-4 h-4 text-emerald-400" />
-                      <span className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg font-mono">
-                        {reviewResult.analysis?.timeComplexity?.after || 'O(n)'}
-                      </span>
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                    <div className="text-2xl font-bold text-purple-400">
+                      {reviewResult.analysis?.timeComplexity?.before || 'N/A'}
                     </div>
-                  </motion.div>
-
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15, duration: 0.2 }}
-                    className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-2xl p-5 hover:border-white/20 transition-all"
-                  >
-                    <p className="text-xs text-gray-500 mb-2">space complexity</p>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="px-2 py-1 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg font-mono">
-                        {reviewResult.analysis?.spaceComplexity?.before || 'O(1)'}
-                      </span>
-                      <TrendingUp className="w-4 h-4 text-emerald-400" />
-                      <span className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg font-mono">
-                        {reviewResult.analysis?.spaceComplexity?.after || 'O(1)'}
-                      </span>
+                    <div className="text-xs text-gray-500 mt-1">before</div>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                    <div className="text-2xl font-bold text-emerald-400">
+                      {reviewResult.analysis?.improvementPercentage || 0}%
                     </div>
-                  </motion.div>
-
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.2 }}
-                    className="bg-gradient-to-br from-emerald-600/20 to-green-600/20 border border-emerald-500/30 rounded-2xl p-5 hover:border-emerald-500/50 transition-all"
-                  >
-                    <p className="text-xs text-emerald-400 mb-2">improvement</p>
-                    <p className="text-3xl font-bold text-gradient">
-                      {Math.round(reviewResult.analysis?.improvementPercentage || 0)}%
-                    </p>
-                  </motion.div>
+                    <div className="text-xs text-gray-500 mt-1">improved</div>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                    <div className="text-2xl font-bold text-blue-400">
+                      {reviewResult.analysis?.timeComplexity?.after || 'N/A'}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">after</div>
+                  </div>
                 </div>
 
                 {/* AI Summary */}
-                {reviewResult.analysis?.summary && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25, duration: 0.2 }}
-                    className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-2xl p-6 hover:border-white/20 transition-all"
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <Brain className="w-5 h-5 text-purple-400" />
-                      <h3 className="text-lg font-bold text-white">AI summary</h3>
+                <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-2xl p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-purple-500/20 rounded-xl">
+                      <Sparkles className="w-5 h-5 text-purple-400" />
                     </div>
-                    <p className="text-gray-300 text-sm leading-relaxed">{reviewResult.analysis.summary}</p>
-                  </motion.div>
-                )}
+                    <h4 className="text-lg font-bold text-white">AI summary</h4>
+                  </div>
+                  <p className="text-gray-300 leading-relaxed">
+                    {reviewResult.analysis?.summary || 'Analysis completed successfully'}
+                  </p>
+                </div>
 
-                {/* Issues Preview (top 2) */}
+                {/* Top Issues */}
                 {reviewResult.analysis?.issues && reviewResult.analysis.issues.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3, duration: 0.2 }}
-                    className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-2xl p-6 hover:border-white/20 transition-all"
-                  >
-                    <h3 className="text-lg font-bold text-white mb-4">
-                      issues found ({reviewResult.analysis.issues.length})
-                    </h3>
-                    <div className="space-y-3">
-                      {reviewResult.analysis.issues.slice(0, 2).map((issue, index) => (
-                        <div
-                          key={index}
-                          className="bg-white/5 border border-white/10 rounded-xl p-4"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                              issue.severity === 'high' 
-                                ? 'bg-red-500/20 text-red-400'
-                                : issue.severity === 'medium'
-                                ? 'bg-orange-500/20 text-orange-400'
-                                : 'bg-yellow-500/20 text-yellow-400'
-                            }`}>
-                              {issue.severity}
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="text-sm font-semibold text-white mb-1">{issue.type}</h4>
-                              <p className="text-xs text-gray-400">{issue.description}</p>
-                            </div>
+                  <div className="space-y-3">
+                    <h4 className="text-lg font-bold text-white">top issues found</h4>
+                    {reviewResult.analysis.issues.slice(0, 2).map((issue, index) => (
+                      <div
+                        key={index}
+                        className="bg-white/5 border border-white/10 rounded-2xl p-4"
+                      >
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-1" />
+                          <div>
+                            <p className="text-white font-medium mb-1">{issue.type || 'Issue'}</p>
+                            <p className="text-sm text-gray-400">{issue.description || issue}</p>
                           </div>
                         </div>
-                      ))}
-                      {reviewResult.analysis.issues.length > 2 && (
-                        <p className="text-xs text-center text-gray-500">
-                          + {reviewResult.analysis.issues.length - 2} more issues
-                        </p>
-                      )}
-                    </div>
-                  </motion.div>
+                      </div>
+                    ))}
+                  </div>
                 )}
 
-                {/* Code Preview */}
+                {/* Optimized Code Preview */}
                 {reviewResult.optimizedCode && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.35, duration: 0.2 }}
-                    className="bg-gradient-to-br from-emerald-600/10 to-green-600/10 border border-emerald-500/20 rounded-2xl p-6 hover:border-emerald-500/40 transition-all"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-bold text-white">optimized code preview</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-lg font-bold text-white">optimized code</h4>
                       <button
-                        onClick={() => copyToClipboard(reviewResult.optimizedCode)}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                        onClick={() => handleCopyCode(reviewResult.optimizedCode)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors duration-100"
                       >
                         {copiedCode ? (
-                          <Check className="w-4 h-4 text-emerald-400" />
+                          <>
+                            <Check className="w-4 h-4 text-green-400" />
+                            <span className="text-sm text-green-400">copied!</span>
+                          </>
                         ) : (
-                          <Copy className="w-4 h-4 text-gray-400" />
+                          <>
+                            <Copy className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm text-gray-400">copy</span>
+                          </>
                         )}
                       </button>
                     </div>
-                    <pre className="bg-black/50 border border-emerald-500/20 rounded-xl p-4 overflow-x-auto max-h-40 overflow-y-auto">
-                      <code className="text-gray-300 text-xs font-mono">{reviewResult.optimizedCode}</code>
-                    </pre>
-                  </motion.div>
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 max-h-64 overflow-y-auto">
+                      <pre className="text-sm text-gray-300 font-mono whitespace-pre-wrap">
+                        {reviewResult.optimizedCode.slice(0, 500)}
+                        {reviewResult.optimizedCode.length > 500 && '...'}
+                      </pre>
+                    </div>
+                  </div>
                 )}
 
                 {/* Action Buttons */}
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4, duration: 0.2 }}
-                  className="flex gap-4"
-                >
+                <div className="flex gap-4 pt-4">
                   <Button
                     onClick={handleViewFullDetails}
                     variant="primary"
@@ -711,46 +607,23 @@ const CodeUpload = ({ onSubmit, onClose }) => {
                   >
                     close & check recent reviews
                   </Button>
-                </motion.div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Footer Navigation */}
+        {/* Footer Progress */}
         {step <= 3 && (
-          <div className="flex items-center justify-between p-6 border-t border-white/10">
-            <Button
-              onClick={() => setStep(step - 1)}
-              variant="secondary"
-              disabled={step === 1}
-            >
-              <ChevronLeft className="w-5 h-5 mr-2" />
-              back
-            </Button>
-
-            {step === 3 ? (
-              <Button
-                onClick={handleSubmit}
-                variant="primary"
-                disabled={!title || !code}
-              >
-                analyse code
-                <Sparkles className="w-5 h-5 ml-2" />
-              </Button>
-            ) : (
-              <Button
-                onClick={() => setStep(step + 1)}
-                variant="primary"
-                disabled={
-                  (step === 1 && !language) ||
-                  (step === 2 && !method)
-                }
-              >
-                next
-                <ChevronRight className="w-5 h-5 ml-2" />
-              </Button>
-            )}
+          <div className="p-4 border-t border-white/10">
+            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${(step / 3) * 100}%` }}
+                transition={FAST}
+                className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
+              />
+            </div>
           </div>
         )}
       </motion.div>
