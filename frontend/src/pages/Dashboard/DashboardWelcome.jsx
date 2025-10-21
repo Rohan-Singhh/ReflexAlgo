@@ -3,7 +3,53 @@ import { motion } from 'framer-motion';
 import { TrendingUp, Zap, Crown } from 'lucide-react';
 
 const DashboardWelcome = memo(({ user, stats, subscription, onOpenPricing }) => {
-  const isPro = subscription?.plan !== 'starter';
+  const isPro = subscription && subscription.plan !== 'starter';
+  
+  // 🎨 Cool dynamic greeting based on time & randomness
+  const getCoolGreeting = () => {
+    const hour = new Date().getHours();
+    const firstName = user?.name?.split(' ')[0] || 'friend';
+    
+    const greetings = {
+      morning: [
+        `rise & shine, ${firstName} ☀️`,
+        `good morning, ${firstName} 🌅`,
+        `wakey wakey, ${firstName} ☕`,
+        `fresh start, ${firstName} 🚀`,
+        `morning grind, ${firstName} 💪`
+      ],
+      afternoon: [
+        `afternoon vibes, ${firstName} 🌤️`,
+        `crushing it, ${firstName} 🔥`,
+        `keep going, ${firstName} ⚡`,
+        `you're on fire, ${firstName} 🚀`,
+        `stay focused, ${firstName} 🎯`
+      ],
+      evening: [
+        `evening warrior, ${firstName} 🌙`,
+        `night owl mode, ${firstName} 🦉`,
+        `late night hustle, ${firstName} 💻`,
+        `burning midnight oil, ${firstName} 🔥`,
+        `still grinding, ${firstName} 💪`
+      ],
+      night: [
+        `night mode: on, ${firstName} 🌃`,
+        `late night legend, ${firstName} 🌙`,
+        `coding in the dark, ${firstName} 💻`,
+        `midnight champion, ${firstName} 🦇`,
+        `nocturnal dev, ${firstName} 🖤`
+      ]
+    };
+    
+    let timeOfDay;
+    if (hour >= 5 && hour < 12) timeOfDay = 'morning';
+    else if (hour >= 12 && hour < 17) timeOfDay = 'afternoon';
+    else if (hour >= 17 && hour < 22) timeOfDay = 'evening';
+    else timeOfDay = 'night';
+    
+    const options = greetings[timeOfDay];
+    return options[Math.floor(Math.random() * options.length)];
+  };
   
   // Calculate subscription status text with actual date
   const getSubscriptionStatus = () => {
@@ -53,7 +99,7 @@ const DashboardWelcome = memo(({ user, stats, subscription, onOpenPricing }) => 
         <div className="flex-1">
           <p className="text-sm text-gray-500 mb-3 tracking-wide uppercase">dashboard</p>
                 <h1 className="text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
-                  gm {user?.name?.split(' ')[0] || 'friend'} 👋
+                  {getCoolGreeting()}
                 </h1>
           <p className="text-gray-400 text-2xl font-light max-w-2xl leading-relaxed">
             ready to make your code <span className="text-gradient font-semibold">lightning fast?</span> 

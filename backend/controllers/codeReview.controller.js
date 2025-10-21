@@ -362,6 +362,16 @@ async function processReview(reviewId, subscription) {
     return;
   }
 
+  // ⚡ ADDED: Invalidate dashboard cache for this user (ensure fresh data)
+  try {
+    const dashboardController = require('./dashboard.controller');
+    if (dashboardController && dashboardController.invalidateUserCache) {
+      dashboardController.invalidateUserCache(updatedReview.user.toString());
+    }
+  } catch (cacheError) {
+    // Silently fail - cache invalidation is not critical
+  }
+
   // ✅ Update user progress - ONLY called on successful reviews!
   if (!updatedReview) {
     console.error('❌ No updatedReview available - cannot update progress');

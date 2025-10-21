@@ -1,7 +1,7 @@
 const { User } = require('../models');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { fastHash, tokenPool } = require('../utils');
+const { fastHash, tokenPool, cacheWarmer } = require('../utils');
 const subscriptionService = require('./subscription.service');
 
 // ⚡ OPTIMIZATION #4: Optimized bcrypt rounds
@@ -249,6 +249,13 @@ class AuthService {
       error.statusCode = 401;
       throw error;
     }
+
+    // ⚡ ADDED: Warm cache for user after successful login (async, non-blocking)
+    setImmediate(() => {
+      cacheWarmer.warmUserCache(user._id).catch(() => {
+        // Silently fail - cache warming is not critical
+      });
+    });
 
     return {
       user: {

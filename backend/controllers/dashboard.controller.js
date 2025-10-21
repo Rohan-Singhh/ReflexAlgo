@@ -1,28 +1,65 @@
 const { UserProgress, CodeReview, Leaderboard, Notification, DSAPattern } = require('../models');
 const { errorHandler } = require('../utils');
 
-// ⚡ OPTIMIZATION: Simple in-memory response cache
+// ⚡ OPTIMIZED: Advanced in-memory response cache with LRU eviction
 const responseCache = new Map();
 const CACHE_TTL = 30000; // 30 seconds
+const MAX_CACHE_SIZE = 500; // Increased from 100
+const CACHE_STATS = { hits: 0, misses: 0, evictions: 0 };
 
-// Cache helper
-const getCachedOrFetch = async (key, fetchFn) => {
+// ⚡ Cache helper with LRU (Least Recently Used) eviction
+const getCachedOrFetch = async (key, fetchFn, customTTL = CACHE_TTL) => {
   const cached = responseCache.get(key);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+  const now = Date.now();
+  
+  if (cached && now - cached.timestamp < customTTL) {
+    // Cache hit - move to end (LRU)
+    CACHE_STATS.hits++;
+    responseCache.delete(key);
+    responseCache.set(key, cached);
     return cached.data;
   }
   
-  const data = await fetchFn();
-  responseCache.set(key, { data, timestamp: Date.now() });
+  // Cache miss - fetch fresh data
+  CACHE_STATS.misses++;
   
-  // Clean up old cache entries (keep max 100 entries)
-  if (responseCache.size > 100) {
-    const firstKey = responseCache.keys().next().value;
-    responseCache.delete(firstKey);
+  const data = await fetchFn();
+  responseCache.set(key, { data, timestamp: now });
+  
+  // ⚡ LRU eviction: Remove oldest entries when cache is full
+  if (responseCache.size > MAX_CACHE_SIZE) {
+    const entriesToRemove = responseCache.size - MAX_CACHE_SIZE;
+    const iterator = responseCache.keys();
+    
+    for (let i = 0; i < entriesToRemove; i++) {
+      const oldestKey = iterator.next().value;
+      responseCache.delete(oldestKey);
+      CACHE_STATS.evictions++;
+    }
   }
   
   return data;
 };
+
+// ⚡ Invalidate cache by pattern (useful for updates)
+const invalidateCache = (pattern) => {
+  for (const key of responseCache.keys()) {
+    if (key.includes(pattern)) {
+      responseCache.delete(key);
+    }
+  }
+};
+
+// ⚡ Cleanup stale cache entries periodically (every 60 seconds)
+setInterval(() => {
+  const now = Date.now();
+  
+  for (const [key, value] of responseCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL * 2) { // Remove entries older than 2x TTL
+      responseCache.delete(key);
+    }
+  }
+}, 60000);
 
 // Get user progress
 exports.getUserProgress = errorHandler(async (req, res) => {
@@ -190,39 +227,56 @@ exports.getPatternProgress = errorHandler(async (req, res) => {
   });
 });
 
-// Get leaderboard (⚡ optimized with caching)
+// Get leaderboard (⚡⚡⚡ ULTRA-OPTIMIZED with pagination, caching, and minimal payload)
 exports.getLeaderboard = errorHandler(async (req, res) => {
   const userId = req.user._id;
   const limit = parseInt(req.query.limit) || 5;
+  const page = parseInt(req.query.page) || 1;
   const period = req.query.period || 'all-time';
-  const cacheKey = `leaderboard:${period}:${limit}:${userId}`;
+  const skip = (page - 1) * limit;
+  const cacheKey = `leaderboard:${period}:${limit}:${page}:${userId}`;
 
-  const formattedLeaderboard = await getCachedOrFetch(cacheKey, async () => {
-    // ⚡ Fetch leaderboard and current user in parallel
-    const [leaderboardData, currentUserEntry] = await Promise.all([
+  const result = await getCachedOrFetch(cacheKey, async () => {
+    console.log(`📊 Leaderboard request - Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
+    
+    // ⚡ OPTIMIZATION 1: Fetch total count, leaderboard, and current user in parallel
+    const [totalCount, leaderboardData, currentUserEntry] = await Promise.all([
+      // Always count for proper pagination
+      Leaderboard.countDocuments({ period }),
+      // ⚡ OPTIMIZATION 2: Minimal field selection + lean for speed
       Leaderboard.find({ period })
-        .populate('user', 'name')
-        .select('rank score rankChange user')
+        .populate('user', 'name') // Only get name, not entire user object
+        .select('rank score rankChange user') // Only fields we need
         .sort({ rank: 1 })
+        .skip(skip)
         .limit(limit)
-        .lean()
-        .maxTimeMS(5000),
+        .lean() // Convert to plain JS objects (faster)
+        .maxTimeMS(3000), // Shorter timeout for faster fails
+      // Get current user's position
       Leaderboard.findOne({ user: userId, period })
         .select('rank score rankChange')
         .lean()
     ]);
+    
+    console.log(`✅ Fetched ${leaderboardData.length} users (Total: ${totalCount}, HasMore: ${skip + leaderboardData.length < totalCount})`);
 
-    const formatted = leaderboardData.map((entry, index) => ({
-      rank: entry.rank || (index + 1),
-      name: entry.user?.name || 'Anonymous',
-      score: entry.score || 0,
-      avatar: getAvatar(entry.user?.name, index),
-      change: entry.rankChange > 0 ? `+${entry.rankChange}` : entry.rankChange < 0 ? `${entry.rankChange}` : '',
-      highlight: entry.user?._id?.toString() === userId.toString()
-    }));
+    // ⚡ OPTIMIZATION 3: Faster array mapping with pre-sized array
+    const formatted = new Array(leaderboardData.length);
+    for (let i = 0; i < leaderboardData.length; i++) {
+      const entry = leaderboardData[i];
+      const isCurrentUser = entry.user?._id?.toString() === userId.toString();
+      formatted[i] = {
+        rank: entry.rank || (skip + i + 1),
+        name: entry.user?.name || 'Anonymous',
+        score: entry.score || 0,
+        avatar: getAvatar(entry.user?.name, i),
+        change: entry.rankChange > 0 ? `+${entry.rankChange}` : entry.rankChange < 0 ? `${entry.rankChange}` : '',
+        highlight: isCurrentUser
+      };
+    }
 
-    // If current user is not in top 5, add them
-    if (currentUserEntry && !formatted.some(e => e.highlight)) {
+    // If current user is not in visible range, add them at the end
+    if (currentUserEntry && !formatted.some(e => e.highlight) && limit <= 50) {
       formatted.push({
         rank: currentUserEntry.rank,
         name: 'you',
@@ -233,12 +287,23 @@ exports.getLeaderboard = errorHandler(async (req, res) => {
       });
     }
 
-    return formatted;
-  });
+    return {
+      data: formatted,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        hasMore: skip + leaderboardData.length < totalCount
+      }
+    };
+  }, 60000); // ⚡ OPTIMIZATION 4: Longer cache (60s) for leaderboard since it doesn't change often
 
+  // ⚡ OPTIMIZATION 5: Add cache headers for browser caching (30 seconds)
+  res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+  
   res.status(200).json({
     success: true,
-    data: formattedLeaderboard
+    ...result
   });
 });
 
@@ -314,4 +379,22 @@ function getAvatar(name, index) {
   const avatars = ['🚀', '⭐', '🥷', '👨‍💻', '👑', '💎', '🎯', '🔥', '⚡', '🌟'];
   return avatars[index] || '👤';
 }
+
+// ⚡ Export cache invalidation function for external use
+exports.invalidateUserCache = (userId) => {
+  invalidateCache(`stats:${userId}`);
+  invalidateCache(`reviews:${userId}`);
+  invalidateCache(`patterns:${userId}`);
+  invalidateCache(`leaderboard:`); // Invalidate all leaderboard caches
+};
+
+// ⚡ Get cache statistics (useful for monitoring)
+exports.getCacheStats = () => {
+  return {
+    size: responseCache.size,
+    maxSize: MAX_CACHE_SIZE,
+    stats: CACHE_STATS,
+    ttl: CACHE_TTL
+  };
+};
 

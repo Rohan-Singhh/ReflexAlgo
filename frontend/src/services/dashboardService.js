@@ -42,9 +42,9 @@ class DashboardService {
   }
 
   // Get leaderboard
-  async getLeaderboard(limit = 5, period = 'all-time') {
+  async getLeaderboard(limit = 5, period = 'all-time', page = 1) {
     try {
-      const response = await api.get(`/dashboard/leaderboard?limit=${limit}&period=${period}`);
+      const response = await api.get(`/dashboard/leaderboard?limit=${limit}&period=${period}&page=${page}`);
       return response.data;
     } catch (error) {
       throw error.response?.data?.message || 'Failed to fetch leaderboard';

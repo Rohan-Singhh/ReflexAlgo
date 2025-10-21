@@ -1,8 +1,9 @@
-import { memo } from 'react';
+import { memo, useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Upload, Clock, CheckCircle, Code2, ArrowRight, Sparkles, Trophy, TrendingUp, Activity, Zap } from 'lucide-react';
+import { Upload, Clock, CheckCircle, Code2, ArrowRight, Sparkles, Trophy, TrendingUp, Activity, Zap, ArrowUp } from 'lucide-react';
 import Button from '../../components/ui/Button';
+import dashboardService from '../../services/dashboardService';
 
 const dsa_patterns_default = [
   { name: 'Sliding Window', mastery: 0, solved: 0, total: 10, emoji: '🪟', color: 'from-blue-500 to-cyan-500' },
@@ -15,11 +16,239 @@ const defaultLeaderboard = [
   { rank: 1, name: 'Loading...', score: 0, avatar: '⏳', change: '' },
 ];
 
+// ⚡ Memoized Leaderboard Item for better performance
+const LeaderboardItem = memo(({ user, index, isCompact = false }) => {
+  const rankBadgeClass = user.rank === 1 
+    ? 'bg-gradient-to-br from-yellow-500 to-orange-500 text-white shadow-lg shadow-yellow-500/50'
+    : user.rank === 2
+    ? 'bg-gradient-to-br from-gray-400 to-gray-500 text-white shadow-lg shadow-gray-500/50'
+    : user.rank === 3
+    ? 'bg-gradient-to-br from-orange-600 to-orange-700 text-white shadow-lg shadow-orange-600/50'
+    : 'bg-white/10 text-gray-400';
+
+  const containerClass = user.highlight
+    ? 'bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-500/30'
+    : 'bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15, delay: Math.min(index * 0.03, 0.3) }}
+      className={`flex items-center gap-5 p-5 rounded-2xl transition-all duration-150 cursor-pointer group ${containerClass}`}
+    >
+      <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${rankBadgeClass}`}>
+        {user.rank}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xl">{user.avatar}</span>
+          <p className={`font-semibold truncate ${user.highlight ? 'text-white' : 'text-gray-300'}`}>
+            {user.name}
+          </p>
+        </div>
+        <p className="text-sm text-gray-500">{user.score.toLocaleString()} pts</p>
+      </div>
+      {user.change && user.change !== '0' && (
+        <div className={`flex-shrink-0 px-3 py-1.5 rounded-full ${
+          user.change.startsWith('+') 
+            ? 'bg-emerald-500/10 border border-emerald-500/20' 
+            : 'bg-red-500/10 border border-red-500/20'
+        }`}>
+          <span className={`text-xs font-semibold ${
+            user.change.startsWith('+') ? 'text-emerald-400' : 'text-red-400'
+          }`}>
+            {user.change}
+          </span>
+        </div>
+      )}
+    </motion.div>
+  );
+});
+
+LeaderboardItem.displayName = 'LeaderboardItem';
+
 const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOpenUpload, allReviews, setActiveTab }) => {
   const navigate = useNavigate();
   // Only show real reviews from database, no dummy data
-  const recentReviews = reviews && reviews.length > 0 ? reviews : [];
-  const dsa_patterns = patterns && patterns.length > 0 ? patterns : dsa_patterns_default;
+  const recentReviews = Array.isArray(reviews) && reviews.length > 0 ? reviews : [];
+  const dsa_patterns = Array.isArray(patterns) && patterns.length > 0 ? patterns : dsa_patterns_default;
+  const safeAllReviews = Array.isArray(allReviews) ? allReviews : [];
+  const safeLeaderboard = Array.isArray(leaderboard) ? leaderboard : [];
+  
+  // ⚡ Infinite scroll for reviews tab
+  const [visibleReviewsCount, setVisibleReviewsCount] = useState(10);
+  const REVIEWS_PER_LOAD = 10;
+  const reviewsLoadMoreRef = useRef(null);
+  
+  // ⚡⚡⚡ OPTIMIZED: Paginated leaderboard with infinite scroll
+  const [fullLeaderboard, setFullLeaderboard] = useState([]);
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [leaderboardPage, setLeaderboardPage] = useState(1);
+  const [hasMoreLeaderboard, setHasMoreLeaderboard] = useState(true);
+  const LEADERBOARD_PAGE_SIZE = 50; // Load 50 at a time for optimal speed
+  
+  // ⚡ Infinite scroll sentinel ref (observer target)
+  const loadMoreRef = useRef(null);
+  
+  // ⚡ Lock to prevent multiple simultaneous loads
+  const isLoadingLockRef = useRef(false);
+  
+  // ⚡ Show scroll-to-top button when user scrolls down
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  
+  useEffect(() => {
+    if (activeTab !== 'leaderboard') return;
+    
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 800);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [activeTab]);
+  
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  // ⚡ Fetch leaderboard with pagination when tab is opened
+  useEffect(() => {
+    if (activeTab === 'leaderboard' && fullLeaderboard.length === 0) {
+      const fetchInitialLeaderboard = async () => {
+        isLoadingLockRef.current = false; // Reset lock
+        setIsLoadingLeaderboard(true);
+        try {
+          console.log('📊 Loading initial leaderboard (page 1)...');
+          const response = await dashboardService.getLeaderboard(LEADERBOARD_PAGE_SIZE, 'all-time', 1);
+          setFullLeaderboard(response.data || []);
+          setHasMoreLeaderboard(response.pagination?.hasMore || false);
+          setLeaderboardPage(1);
+          console.log(`✅ Loaded ${response.data?.length || 0} users initially`);
+        } catch (error) {
+          console.error('Failed to fetch leaderboard:', error);
+          setFullLeaderboard(safeLeaderboard);
+          setHasMoreLeaderboard(false);
+        } finally {
+          setIsLoadingLeaderboard(false);
+        }
+      };
+      fetchInitialLeaderboard();
+    }
+    
+    // Reset when leaving tab
+    if (activeTab !== 'leaderboard') {
+      isLoadingLockRef.current = false;
+    }
+  }, [activeTab, safeLeaderboard]);
+  
+  // ⚡ Load more leaderboard entries (pagination)
+  const loadMoreLeaderboard = useCallback(async () => {
+    // ⚡ Double-check lock: Prevent multiple simultaneous requests
+    if (isLoadingMore || !hasMoreLeaderboard || isLoadingLockRef.current) return;
+    
+    isLoadingLockRef.current = true; // Lock immediately
+    setIsLoadingMore(true);
+    
+    try {
+      const nextPage = leaderboardPage + 1;
+      console.log(`📊 Loading leaderboard page ${nextPage}...`);
+      
+      const response = await dashboardService.getLeaderboard(LEADERBOARD_PAGE_SIZE, 'all-time', nextPage);
+      
+      // Append new data to existing (avoid duplicates by checking rank)
+      setFullLeaderboard(prev => {
+        const existingRanks = new Set(prev.map(user => user.rank));
+        const newUsers = (response.data || []).filter(user => !existingRanks.has(user.rank));
+        
+        if (newUsers.length > 0) {
+          console.log(`✅ Added ${newUsers.length} new users (ranks ${newUsers[0].rank}-${newUsers[newUsers.length-1].rank})`);
+        } else {
+          console.log('⚠️ No new users added (all duplicates filtered)');
+        }
+        
+        return [...prev, ...newUsers];
+      });
+      
+      setHasMoreLeaderboard(response.pagination?.hasMore || false);
+      setLeaderboardPage(nextPage);
+    } catch (error) {
+      console.error('Failed to load more leaderboard:', error);
+      setHasMoreLeaderboard(false);
+    } finally {
+      setIsLoadingMore(false);
+      isLoadingLockRef.current = false; // Unlock
+    }
+  }, [isLoadingMore, hasMoreLeaderboard, leaderboardPage]);
+  
+  // ⚡ Infinite Scroll: Observe when sentinel element comes into view
+  useEffect(() => {
+    if (activeTab !== 'leaderboard' || !hasMoreLeaderboard || isLoadingMore || isLoadingLockRef.current) return;
+    
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
+    
+    // Create intersection observer
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // When sentinel is visible and not already loading, load more
+        if (entries[0].isIntersecting && !isLoadingLockRef.current) {
+          loadMoreLeaderboard();
+        }
+      },
+      {
+        root: null, // viewport
+        rootMargin: '200px', // Start loading 200px before reaching the bottom
+        threshold: 0.1 // Trigger when 10% visible
+      }
+    );
+    
+    observer.observe(sentinel);
+    
+    // Cleanup
+    return () => {
+      if (sentinel) {
+        observer.unobserve(sentinel);
+      }
+    };
+  }, [activeTab, hasMoreLeaderboard, isLoadingMore, loadMoreLeaderboard]);
+  
+  // ⚡ Memoized visible reviews (only compute when dependencies change)
+  const visibleReviews = useMemo(() => {
+    return safeAllReviews.slice(0, visibleReviewsCount);
+  }, [safeAllReviews, visibleReviewsCount]);
+  
+  const hasMoreReviews = safeAllReviews.length > visibleReviewsCount;
+  
+  // ⚡ Infinite Scroll for Reviews Tab
+  useEffect(() => {
+    if (activeTab !== 'reviews' || !hasMoreReviews) return;
+    
+    const sentinel = reviewsLoadMoreRef.current;
+    if (!sentinel) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleReviewsCount(prev => Math.min(prev + REVIEWS_PER_LOAD, safeAllReviews.length));
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px',
+        threshold: 0.1
+      }
+    );
+    
+    observer.observe(sentinel);
+    
+    return () => {
+      if (sentinel) {
+        observer.unobserve(sentinel);
+      }
+    };
+  }, [activeTab, hasMoreReviews, safeAllReviews.length]);
   
   // Reviews Tab
   if (activeTab === 'reviews') {
@@ -31,13 +260,13 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
         </div>
 
         <div className="grid grid-cols-1 gap-5">
-          {allReviews && allReviews.length > 0 ? (
-            allReviews.map((review, index) => (
+          {visibleReviews && visibleReviews.length > 0 ? (
+            visibleReviews.map((review, index) => (
               <motion.div
                 key={review.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
+                transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.3) }}
                 className="group relative bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/10 hover:border-white/20 rounded-2xl p-6 cursor-pointer transition-all duration-150"
                 onClick={() => navigate(`/review/${review.id}`)}
               >
@@ -156,13 +385,29 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
             </div>
           )}
         </div>
+
+        {/* ⚡ Infinite Scroll Sentinel for Reviews */}
+        {hasMoreReviews && (
+          <div ref={reviewsLoadMoreRef} className="flex justify-center pt-8 pb-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-2"
+            >
+              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </motion.div>
+          </div>
+        )}
       </div>
     );
   }
   
   // Leaderboard Tab - Cool & Modern Design
   if (activeTab === 'leaderboard') {
-    const leaderboardData = leaderboard && leaderboard.length > 0 ? leaderboard : defaultLeaderboard;
+    // ⚡ Use full leaderboard data (all users) when in leaderboard tab
+    const leaderboardData = fullLeaderboard.length > 0 ? fullLeaderboard : (safeLeaderboard.length > 0 ? safeLeaderboard : defaultLeaderboard);
     const topThree = leaderboardData.slice(0, 3);
     const rest = leaderboardData.slice(3);
     
@@ -186,8 +431,18 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
           </div>
         </div>
 
-        {/* Top 3 - Compact Podium */}
-        {topThree.length >= 3 && (
+        {/* Loading State */}
+        {isLoadingLeaderboard ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-gray-400 text-sm">loading all competitors...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Top 3 - Compact Podium */}
+            {topThree.length >= 3 && (
           <div className="max-w-4xl mx-auto">
             <div className="grid grid-cols-3 gap-4 items-end">
               {/* 2nd Place */}
@@ -318,20 +573,87 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
           </div>
         )}
 
-        {/* Empty State */}
-        {leaderboardData.length <= 1 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
-          >
-            <div className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600/10 border border-purple-500/20 rounded-xl">
-              <Trophy className="w-5 h-5 text-yellow-400" />
-              <p className="text-gray-300 text-sm">
-                complete more code reviews to climb the leaderboard! 🚀
-              </p>
-            </div>
-          </motion.div>
+            {/* Empty State */}
+            {leaderboardData.length <= 1 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12"
+              >
+                <div className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600/10 border border-purple-500/20 rounded-xl">
+                  <Trophy className="w-5 h-5 text-yellow-400" />
+                  <p className="text-gray-300 text-sm">
+                    complete more code reviews to climb the leaderboard! 🚀
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ⚡ Infinite Scroll: Sentinel element & Loading indicator */}
+            {fullLeaderboard.length > 0 && (
+              <div ref={loadMoreRef} className="flex justify-center py-12">
+                {isLoadingMore && hasMoreLeaderboard ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center gap-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <p className="text-gray-400 text-sm font-medium">loading more competitors...</p>
+                  </motion.div>
+                ) : !hasMoreLeaderboard && fullLeaderboard.length > 5 ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", duration: 0.5 }}
+                    className="text-center"
+                  >
+                    <div className="relative">
+                      {/* Animated background glow */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-indigo-600/20 rounded-2xl blur-xl animate-pulse" />
+                      
+                      {/* Main completion card */}
+                      <div className="relative inline-flex flex-col items-center gap-3 px-8 py-6 bg-gradient-to-r from-purple-600/10 to-indigo-600/10 border border-purple-500/30 rounded-2xl">
+                        <motion.div
+                          animate={{ rotate: [0, 10, -10, 10, 0] }}
+                          transition={{ duration: 0.5, delay: 0.2 }}
+                          className="text-5xl"
+                        >
+                          🏆
+                        </motion.div>
+                        <div>
+                          <p className="text-white text-lg font-bold mb-1">
+                            legendary! you've seen them all
+                          </p>
+                          <p className="text-gray-400 text-sm">
+                            {fullLeaderboard.length} warriors conquered • keep grinding! 💪
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : null}
+              </div>
+            )}
+
+            {/* ⚡ Scroll to Top Button (appears after scrolling down) */}
+            {showScrollTop && (
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                onClick={scrollToTop}
+                className="fixed bottom-8 right-8 p-4 bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full shadow-2xl shadow-purple-500/50 transition-all hover:scale-110 z-50"
+                title="Scroll to top"
+              >
+                <ArrowUp className="w-6 h-6" />
+              </motion.button>
+            )}
+          </>
         )}
       </div>
     );
@@ -561,59 +883,8 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
             </div>
 
             <div className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/10 rounded-3xl p-8 space-y-4">
-              {(leaderboard && leaderboard.length > 0 ? leaderboard : defaultLeaderboard).map((user, index) => (
-                <motion.div
-                  key={user.rank}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.15, delay: index * 0.03 }}
-                  className={`flex items-center gap-5 p-5 rounded-2xl transition-all duration-150 ${
-                    user.highlight
-                      ? 'bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-500/30'
-                      : 'bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10'
-                  } cursor-pointer group`}
-                >
-                  {/* Rank Badge */}
-                  <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
-                    user.rank === 1 
-                      ? 'bg-gradient-to-br from-yellow-500 to-orange-500 text-white shadow-lg shadow-yellow-500/50'
-                      : user.rank === 2
-                      ? 'bg-gradient-to-br from-gray-400 to-gray-500 text-white shadow-lg shadow-gray-500/50'
-                      : user.rank === 3
-                      ? 'bg-gradient-to-br from-orange-600 to-orange-700 text-white shadow-lg shadow-orange-600/50'
-                      : 'bg-white/10 text-gray-400'
-                  }`}>
-                    {user.rank}
-                  </div>
-
-                  {/* User Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xl">{user.avatar}</span>
-                      <p className={`font-semibold truncate ${user.highlight ? 'text-white' : 'text-gray-300'}`}>
-                        {user.name}
-                      </p>
-                    </div>
-                    <p className="text-sm text-gray-500">
-                      {user.score.toLocaleString()} pts
-                    </p>
-                  </div>
-
-                  {/* Change Badge - Only show if there's actual change */}
-                  {user.change && user.change !== '0' && (
-                    <div className={`flex-shrink-0 px-3 py-1.5 rounded-full ${
-                      user.change.startsWith('+') 
-                        ? 'bg-emerald-500/10 border border-emerald-500/20' 
-                        : 'bg-red-500/10 border border-red-500/20'
-                    }`}>
-                      <span className={`text-xs font-semibold ${
-                        user.change.startsWith('+') ? 'text-emerald-400' : 'text-red-400'
-                      }`}>
-                        {user.change}
-                      </span>
-                    </div>
-                  )}
-                </motion.div>
+              {(safeLeaderboard.length > 0 ? safeLeaderboard : defaultLeaderboard).map((user, index) => (
+                <LeaderboardItem key={user.rank} user={user} index={index} isCompact />
               ))}
 
               {/* View Full Leaderboard */}
@@ -637,3 +908,4 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
 DashboardContent.displayName = 'DashboardContent';
 
 export default DashboardContent;
+

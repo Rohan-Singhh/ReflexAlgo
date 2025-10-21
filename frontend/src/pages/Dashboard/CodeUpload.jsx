@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Code2, FileCode, ChevronRight, ChevronLeft, Check, CheckCircle, AlertCircle, Sparkles, Brain, Target, Zap, TrendingUp, Copy, ExternalLink } from 'lucide-react';
+import { X, Upload, Code2, FileCode, ChevronRight, ChevronLeft, Check, CheckCircle, Sparkles, Brain, Target, Zap, TrendingUp, Copy, ExternalLink, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import codeReviewService from '../../services/codeReviewService';
@@ -9,7 +9,8 @@ import codeReviewService from '../../services/codeReviewService';
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_CODE_LENGTH = 50000; // 50k characters
 const POLL_INTERVAL = 2500; // 2.5 seconds - optimized to reduce server load
-const STEP_INTERVAL = 1500; // 1.5 seconds per analyzing step
+const STEP_INTERVAL = 2800; // 2.8 seconds per step = ~14 seconds total for 5 steps
+const HIGH_TRAFFIC_THRESHOLD = 15000; // Show message after 15 seconds
 
 const LANGUAGES = [
   { value: 'JavaScript', label: 'JavaScript', icon: '🟨' },
@@ -36,12 +37,12 @@ const AnalyzingSteps = [
   { icon: CheckCircle, text: 'finalizing results...', color: 'text-green-400' }
 ];
 
-// ⚡ OPTIMIZED ANIMATION PRESETS - Fast but smooth
-const SMOOTH = { duration: 0.2, ease: [0.4, 0, 0.2, 1] }; // Smooth cubic-bezier
-const FAST = { duration: 0.15, ease: [0.4, 0, 0.2, 1] };
-const SPRING = { type: "spring", stiffness: 300, damping: 30 };
+// ⚡ OPTIMIZED ANIMATION PRESETS - Fast & buttery smooth
+const SMOOTH = { duration: 0.15, ease: [0.4, 0, 0.2, 1] }; // Smooth cubic-bezier
+const FAST = { duration: 0.1, ease: [0.4, 0, 0.2, 1] };
+const SPRING = { type: "spring", stiffness: 400, damping: 25 };
 
-const CodeUpload = ({ onSubmit, onClose }) => {
+const CodeUpload = ({ onSubmit, onClose, onOpenPricing, subscription }) => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [language, setLanguage] = useState('');
@@ -58,14 +59,40 @@ const CodeUpload = ({ onSubmit, onClose }) => {
   const [reviewId, setReviewId] = useState(null);
   const [reviewResult, setReviewResult] = useState(null);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [showHighTrafficMsg, setShowHighTrafficMsg] = useState(false);
+  
+  // Upgrade modal state
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  
+  // ⚡ Check if user has reached limit IMMEDIATELY on mount (before any interaction)
+  useEffect(() => {
+    if (subscription) {
+      const hasReachedLimit = subscription.reviewsUsed >= subscription.reviewsLimit;
+      if (hasReachedLimit) {
+        // Show upgrade modal immediately on step 1
+        setTimeout(() => setShowUpgradeModal(true), 100); // Very short delay for smooth render
+      }
+    }
+  }, [subscription]);
 
   // Refs for cleanup
   const stepIntervalRef = useRef(null);
   const pollIntervalRef = useRef(null);
   const pollCountRef = useRef(0);
+  const highTrafficTimerRef = useRef(null);
+  const analysisStartTimeRef = useRef(0);
 
-  // Cleanup function
-  const cleanup = useCallback(() => {
+  // Cleanup polling interval only (used during analysis)
+  const cleanupPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    pollCountRef.current = 0;
+  }, []);
+
+  // Complete cleanup - clears ALL intervals (used on unmount/close)
+  const cleanupAll = useCallback(() => {
     if (stepIntervalRef.current) {
       clearInterval(stepIntervalRef.current);
       stepIntervalRef.current = null;
@@ -74,24 +101,61 @@ const CodeUpload = ({ onSubmit, onClose }) => {
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
     }
+    if (highTrafficTimerRef.current) {
+      clearTimeout(highTrafficTimerRef.current);
+      highTrafficTimerRef.current = null;
+    }
     pollCountRef.current = 0;
+    setShowHighTrafficMsg(false);
   }, []);
 
-  // Animate through analyzing steps
+  // Animate through analyzing steps - smooth progression (NO LOOP)
   useEffect(() => {
+    // Always clear any existing interval first
+    if (stepIntervalRef.current) {
+      clearInterval(stepIntervalRef.current);
+      stepIntervalRef.current = null;
+    }
+
     if (isAnalyzing) {
+      // Record start time
+      analysisStartTimeRef.current = Date.now();
+      
+      // Start fresh interval
       stepIntervalRef.current = setInterval(() => {
-        setCurrentAnalyzingStep(prev => (prev + 1) % AnalyzingSteps.length);
+        setCurrentAnalyzingStep(prev => {
+          const next = prev + 1;
+          // STOP at last step, don't loop back
+          if (next >= AnalyzingSteps.length) {
+            clearInterval(stepIntervalRef.current);
+            stepIntervalRef.current = null;
+            return AnalyzingSteps.length - 1; // Stay at last step
+          }
+          return next;
+        });
       }, STEP_INTERVAL);
+
+      // Set timer for high traffic message (15 seconds)
+      highTrafficTimerRef.current = setTimeout(() => {
+        setShowHighTrafficMsg(true);
+      }, HIGH_TRAFFIC_THRESHOLD);
     } else {
+      // Reset when analysis stops
+      setShowHighTrafficMsg(false);
+      if (highTrafficTimerRef.current) {
+        clearTimeout(highTrafficTimerRef.current);
+        highTrafficTimerRef.current = null;
+      }
+    }
+
+    return () => {
       if (stepIntervalRef.current) {
         clearInterval(stepIntervalRef.current);
         stepIntervalRef.current = null;
       }
-    }
-    return () => {
-      if (stepIntervalRef.current) {
-        clearInterval(stepIntervalRef.current);
+      if (highTrafficTimerRef.current) {
+        clearTimeout(highTrafficTimerRef.current);
+        highTrafficTimerRef.current = null;
       }
     };
   }, [isAnalyzing]);
@@ -99,7 +163,7 @@ const CodeUpload = ({ onSubmit, onClose }) => {
   // Poll for review completion - optimized with max attempts
   useEffect(() => {
     if (!reviewId || !isAnalyzing) {
-      cleanup();
+      cleanupPolling();
       return;
     }
 
@@ -109,7 +173,7 @@ const CodeUpload = ({ onSubmit, onClose }) => {
         setError('Analysis is taking longer than expected. Please check back later.');
         setIsAnalyzing(false);
         setStep(3);
-        cleanup();
+        cleanupPolling();
         return true;
       }
 
@@ -122,13 +186,13 @@ const CodeUpload = ({ onSubmit, onClose }) => {
           setReviewResult(result.data);
           setIsAnalyzing(false);
           setStep(5);
-          cleanup();
+          cleanupPolling();
           return true;
         } else if (status === 'failed') {
           setError('Analysis failed. Please try again.');
           setIsAnalyzing(false);
           setStep(3);
-          cleanup();
+          cleanupPolling();
           return true;
         }
         return false;
@@ -144,8 +208,8 @@ const CodeUpload = ({ onSubmit, onClose }) => {
     // Set up interval
     pollIntervalRef.current = setInterval(pollOnce, POLL_INTERVAL);
 
-    return cleanup;
-  }, [reviewId, isAnalyzing, cleanup]);
+    return cleanupPolling;
+  }, [reviewId, isAnalyzing, cleanupPolling]);
 
   // Memoized handlers
   const handleLanguageSelect = useCallback((lang) => {
@@ -253,9 +317,17 @@ const CodeUpload = ({ onSubmit, onClose }) => {
       }
     } catch (err) {
       console.error('Submit error:', err);
-      setError(err.message || 'Failed to submit code. Please try again.');
-      setIsAnalyzing(false);
-      setStep(3);
+      
+      // Check if it's a 403 (limit exceeded) error
+      if (err.response?.status === 403 || err.message?.toLowerCase().includes('limit') || err.message?.toLowerCase().includes('upgrade')) {
+        setShowUpgradeModal(true);
+        setIsAnalyzing(false);
+        setStep(3);
+      } else {
+        setError(err.message || 'Failed to submit code. Please try again.');
+        setIsAnalyzing(false);
+        setStep(3);
+      }
     }
   }, [code, title, language, onSubmit]);
 
@@ -269,29 +341,29 @@ const CodeUpload = ({ onSubmit, onClose }) => {
 
   const handleViewFullDetails = useCallback(() => {
     if (reviewId) {
-      cleanup();
+      cleanupAll();
       setIsAnalyzing(false);
       onClose();
       navigate(`/review/${reviewId}`);
     }
-  }, [reviewId, navigate, onClose, cleanup]);
+  }, [reviewId, navigate, onClose, cleanupAll]);
 
   const handleClose = useCallback(() => {
-    cleanup();
+    cleanupAll();
     setIsAnalyzing(false);
     if (reviewId && onClose) {
       onClose(true);
     } else if (onClose) {
       onClose();
     }
-  }, [reviewId, onClose, cleanup]);
+  }, [reviewId, onClose, cleanupAll]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      cleanup();
+      cleanupAll();
     };
-  }, [cleanup]);
+  }, [cleanupAll]);
 
   // Memoize validation states
   const canSubmit = useMemo(() => {
@@ -313,8 +385,13 @@ const CodeUpload = ({ onSubmit, onClose }) => {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={SMOOTH}
-        className="bg-gradient-to-b from-[#0D0D0D] to-[#0A0A0A] border border-white/10 rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl shadow-purple-500/5"
+        className="bg-gradient-to-b from-[#0D0D0D] to-[#0A0A0A] border border-white/10 rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl shadow-purple-500/5 relative"
       >
+        {/* Overlay to block interaction when upgrade modal is shown */}
+        {showUpgradeModal && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40" />
+        )}
+        
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div>
@@ -336,8 +413,8 @@ const CodeUpload = ({ onSubmit, onClose }) => {
           </motion.button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        {/* Content - Smooth scrolling without visible scrollbar */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)] hide-scrollbar">
           <AnimatePresence mode="wait">
             {/* Step 1: Language Selection */}
             {step === 1 && (
@@ -511,7 +588,7 @@ const CodeUpload = ({ onSubmit, onClose }) => {
                       onChange={(e) => setCode(e.target.value)}
                       placeholder="Paste your code here..."
                       rows={12}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:bg-white/10 font-mono text-sm resize-none transition-all duration-200 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:bg-white/10 font-mono text-sm resize-none transition-all duration-200 custom-scrollbar"
                     />
                   </div>
                 )}
@@ -531,107 +608,220 @@ const CodeUpload = ({ onSubmit, onClose }) => {
               </motion.div>
             )}
 
-            {/* Step 4: Analyzing - Compact & Elegant */}
+            {/* Step 4: Analyzing - Beautiful & Smooth */}
             {step === 4 && isAnalyzing && (
               <motion.div
                 key="analyzing"
-                initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98, y: -10 }}
-                transition={SMOOTH}
-                className="relative"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.2 }}
+                className="relative py-6"
               >
-                {/* Subtle Background Glow */}
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 via-blue-600/5 to-pink-600/5 rounded-2xl blur-2xl animate-pulse"></div>
+                {/* Animated Background Gradient */}
+                <motion.div 
+                  animate={{ 
+                    background: [
+                      'radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.08), transparent 50%)',
+                      'radial-gradient(circle at 80% 50%, rgba(59, 130, 246, 0.08), transparent 50%)',
+                      'radial-gradient(circle at 50% 80%, rgba(236, 72, 153, 0.08), transparent 50%)',
+                      'radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.08), transparent 50%)',
+                    ]
+                  }}
+                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 rounded-3xl"
+                />
                 
-                <div className="relative bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-purple-500/20 rounded-2xl p-8">
-                  {/* Compact Animation */}
-                  <div className="text-center mb-6">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                      className="relative w-16 h-16 mx-auto mb-4"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-blue-500 to-pink-500 rounded-full blur-md opacity-40"></div>
-                      <div className="absolute inset-0 border-2 border-purple-500/30 rounded-full"></div>
-                      <div className="absolute inset-0 border-2 border-t-purple-500 border-r-blue-500 border-transparent rounded-full"></div>
-                      <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-white" />
-                    </motion.div>
+                <div className="relative">
+                  {/* Modern Spinner */}
+                  <div className="flex justify-center mb-6">
+                    <div className="relative w-20 h-20">
+                      {/* Outer ring */}
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                        className="absolute inset-0 rounded-full border-2 border-purple-500/20"
+                      />
+                      {/* Spinning gradient ring */}
+                      <motion.div
+                        animate={{ rotate: -360 }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        className="absolute inset-0 rounded-full border-2 border-transparent border-t-purple-500 border-r-blue-500"
+                      />
+                      {/* Inner glow */}
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/30 to-blue-500/30 blur-lg"
+                      />
+                      {/* Center icon */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Sparkles className="w-8 h-8 text-white" />
+                      </div>
+                    </div>
+                  </div>
 
+                  {/* Header */}
+                  <div className="text-center mb-10">
                     <motion.h2 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-xl font-bold text-white mb-2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-2xl font-bold text-white mb-2"
                     >
                       analyzing your code...
                     </motion.h2>
-                    <p className="text-gray-500 text-sm mb-6">
-                      AI is optimizing ✨
+                    <p className="text-gray-400">
+                      AI is working its magic ✨
                     </p>
                   </div>
 
-                  {/* Compact Steps */}
-                  <div className="space-y-3 max-w-md mx-auto">
-                    <AnimatePresence mode="wait">
+                  {/* Steps - Horizontal Flow */}
+                  <div className="max-w-4xl mx-auto px-4">
+                    <div className="flex items-center justify-between">
                       {AnalyzingSteps.map((stepItem, index) => {
                         const Icon = stepItem.icon;
                         const isActive = index === currentAnalyzingStep;
-                        const isPast = index < currentAnalyzingStep;
+                        const isCompleted = currentAnalyzingStep > index;
                         
                         return (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ 
-                              opacity: isActive ? 1 : isPast ? 0.5 : 0.3,
-                              x: 0,
-                              scale: isActive ? 1.02 : 1
-                            }}
-                            transition={{ duration: 0.2 }}
-                            className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                              isActive 
-                                ? 'bg-white/10 border-white/20' 
-                                : 'bg-white/5 border-white/5'
-                            }`}
-                          >
-                            <div className={`p-2 rounded-lg ${
-                              isActive ? 'bg-purple-600/30 animate-pulse' : 'bg-white/5'
-                            }`}>
-                              <Icon className={`w-4 h-4 ${isActive ? stepItem.color : 'text-gray-600'}`} />
+                          <div key={index} className="flex items-center flex-1">
+                            {/* Step Circle */}
+                            <div className="flex flex-col items-center flex-1">
+                              <motion.div
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ 
+                                  scale: isActive ? 1.15 : 1,
+                                  opacity: isActive ? 1 : isCompleted ? 0.8 : 0.4
+                                }}
+                                transition={{ duration: 0.3 }}
+                                className={`relative flex items-center justify-center w-14 h-14 rounded-full border-2 mb-3 ${
+                                  isActive 
+                                    ? 'border-purple-500 bg-gradient-to-br from-purple-500/30 to-blue-500/30' 
+                                    : isCompleted
+                                    ? 'border-emerald-500 bg-emerald-500/20'
+                                    : 'border-white/20 bg-white/5'
+                                }`}
+                              >
+                                {isCompleted ? (
+                                  <motion.div
+                                    initial={{ scale: 0, rotate: -180 }}
+                                    animate={{ scale: 1, rotate: 0 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                                  >
+                                    <CheckCircle className="w-6 h-6 text-emerald-400" />
+                                  </motion.div>
+                                ) : (
+                                  <motion.div
+                                    animate={isActive ? { 
+                                      scale: [1, 1.2, 1],
+                                      rotate: [0, 5, -5, 0]
+                                    } : {}}
+                                    transition={{ duration: 1, repeat: Infinity }}
+                                  >
+                                    <Icon className={`w-6 h-6 ${isActive ? stepItem.color : 'text-gray-600'}`} />
+                                  </motion.div>
+                                )}
+                                
+                                {/* Pulsing ring for active step */}
+                                {isActive && (
+                                  <>
+                                    <motion.div
+                                      animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
+                                      transition={{ duration: 1.5, repeat: Infinity }}
+                                      className="absolute inset-0 rounded-full border-2 border-purple-500"
+                                    />
+                                    <motion.div
+                                      animate={{ scale: [1, 1.8], opacity: [0.3, 0] }}
+                                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+                                      className="absolute inset-0 rounded-full border-2 border-blue-500"
+                                    />
+                                  </>
+                                )}
+                              </motion.div>
+                              
+                              {/* Step Label */}
+                              <motion.p
+                                animate={{ 
+                                  opacity: isActive ? 1 : isCompleted ? 0.7 : 0.3,
+                                  y: isActive ? [0, -2, 0] : 0
+                                }}
+                                transition={isActive ? { duration: 2, repeat: Infinity } : {}}
+                                className={`text-xs text-center font-medium px-2 ${
+                                  isActive ? 'text-white' : isCompleted ? 'text-emerald-400' : 'text-gray-600'
+                                }`}
+                              >
+                                {stepItem.text.replace('...', '')}
+                              </motion.p>
                             </div>
-                            <div className="flex-1">
-                              <p className={`text-sm font-medium ${
-                                isActive ? 'text-white' : 'text-gray-500'
-                              }`}>
-                                {stepItem.text}
-                              </p>
-                            </div>
-                            {isPast && (
-                              <CheckCircle className="w-4 h-4 text-emerald-400" />
-                            )}
-                            {isActive && (
-                              <div className="flex gap-1">
-                                <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                            
+                            {/* Connector Line */}
+                            {index < AnalyzingSteps.length - 1 && (
+                              <div className="flex items-center -mt-8 flex-shrink-0 px-2">
+                                <div className="relative h-0.5 w-12">
+                                  {/* Background line */}
+                                  <div className="absolute inset-0 bg-white/10 rounded-full" />
+                                  {/* Animated progress line */}
+                                  <motion.div
+                                    initial={{ scaleX: 0 }}
+                                    animate={{ 
+                                      scaleX: isCompleted ? 1 : 0
+                                    }}
+                                    transition={{ duration: 0.5, ease: "easeOut" }}
+                                    className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full origin-left"
+                                  />
+                                  {/* Shimmer effect on active */}
+                                  {isActive && (
+                                    <motion.div
+                                      animate={{ x: [-50, 50] }}
+                                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                      className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-purple-400/50 to-transparent rounded-full"
+                                    />
+                                  )}
+                                </div>
                               </div>
                             )}
-                          </motion.div>
+                          </div>
                         );
                       })}
-                    </AnimatePresence>
+                    </div>
                   </div>
 
-                  {/* Pro Tip */}
+                  {/* Status Messages */}
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1.5 }}
-                    className="mt-6 text-center"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="mt-10 text-center space-y-3"
                   >
-                    <p className="text-xs text-gray-500">
-                      💡 <span className="text-purple-400">pro tip:</span> grab a coffee while AI works its magic ☕
-                    </p>
+                    {/* Normal tip - shows first */}
+                    {!showHighTrafficMsg && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        <div className="inline-block px-6 py-3 bg-purple-500/10 border border-purple-500/20 rounded-full">
+                          <p className="text-sm text-gray-400">
+                            💡 <span className="text-purple-400 font-medium">tip:</span> this usually takes 10-15 seconds
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                    
+                    {/* High traffic message - shows after 15 seconds */}
+                    {showHighTrafficMsg && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      >
+                        <div className="inline-block px-6 py-3 bg-amber-500/10 border border-amber-500/30 rounded-full">
+                          <p className="text-sm text-amber-400">
+                            ⏳ <span className="font-medium">high traffic detected</span> — your analysis is in queue, please wait a moment
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
                   </motion.div>
                 </div>
               </motion.div>
@@ -734,7 +924,7 @@ const CodeUpload = ({ onSubmit, onClose }) => {
                         )}
                       </button>
                     </div>
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 max-h-64 overflow-y-auto">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 max-h-64 overflow-y-auto custom-scrollbar">
                       <pre className="text-sm text-gray-300 font-mono whitespace-pre-wrap">
                         {reviewResult.optimizedCode.slice(0, 500)}
                         {reviewResult.optimizedCode.length > 500 && '...'}
@@ -780,6 +970,110 @@ const CodeUpload = ({ onSubmit, onClose }) => {
           </div>
         )}
       </motion.div>
+
+      {/* ⚡ Upgrade Modal - Shown when limit reached */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 backdrop-blur-md z-[10000] flex items-center justify-center p-4"
+            onClick={(e) => {
+              // Don't allow closing by clicking outside when limit is reached
+              e.stopPropagation();
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={SPRING}
+              className="relative bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border border-purple-500/30 rounded-3xl p-8 max-w-md w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Animated background glow */}
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-indigo-600/10 rounded-3xl blur-2xl animate-pulse" />
+              
+              {/* Content */}
+              <div className="relative">
+                {/* Icon */}
+                <div className="flex justify-center mb-6">
+                  <motion.div
+                    animate={{ rotate: [0, -10, 10, -10, 0] }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="w-20 h-20 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-yellow-500/50"
+                  >
+                    <Crown className="w-10 h-10 text-white" />
+                  </motion.div>
+                </div>
+
+                {/* Title & Message */}
+                <h2 className="text-3xl font-bold text-white text-center mb-3">
+                  free plan limit reached! 🚀
+                </h2>
+                <p className="text-gray-400 text-center mb-6">
+                  you've used all <span className="text-white font-semibold">{subscription?.reviewsLimit || 3} free reviews</span> this month. upgrade to <span className="text-purple-400 font-semibold">pro</span> for unlimited reviews and advanced AI features!
+                </p>
+
+                {/* Features */}
+                <div className="space-y-3 mb-8">
+                  {[
+                    '✨ Unlimited code reviews',
+                    '🚀 Priority processing',
+                    '🧠 Advanced AI insights',
+                    '📊 Detailed analytics'
+                  ].map((feature, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 * i }}
+                      className="flex items-center gap-3 text-gray-300"
+                    >
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                      <span>{feature}</span>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => {
+                      setShowUpgradeModal(false);
+                      // Open pricing modal in dashboard
+                      if (onOpenPricing) {
+                        onOpenPricing();
+                      }
+                    }}
+                    variant="primary"
+                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                  >
+                    <Crown className="w-5 h-5 mr-2" />
+                    upgrade to pro now
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowUpgradeModal(false);
+                      onClose(false); // Close upload modal too
+                    }}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    close & view past reviews
+                  </Button>
+                </div>
+                
+                {/* Info notice */}
+                <p className="text-center text-gray-400 text-xs mt-4">
+                  💡 your past reviews are still available in the dashboard
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

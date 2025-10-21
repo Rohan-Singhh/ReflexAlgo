@@ -6,6 +6,7 @@ dotenv.config();
 const app = require('./app');
 const { connectDatabase, warmupDatabase, configureProcessHandlers } = require('./config');
 const ensureIndexes = require('./utils/ensureIndexes');
+const { cacheWarmer } = require('./utils');
 
 const PORT = process.env.PORT || 5000;
 
@@ -14,8 +15,14 @@ connectDatabase().then(async () => {
   // ⚡ Ensure database indexes for max performance
   await ensureIndexes();
   
-  // ⚡ Pre-warm connections
+  // ⚡ Pre-warm database connections
   await warmupDatabase();
+  
+  // ⚡ Warm global cache for faster first requests
+  await cacheWarmer.warmGlobalCache();
+  
+  // ⚡ Schedule periodic cache warming for hot data
+  cacheWarmer.schedulePeriodicWarming();
 
   const server = app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
