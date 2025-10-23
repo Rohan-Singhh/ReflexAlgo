@@ -70,13 +70,13 @@ leaderboardSchema.statics.calculateScore = function(userData) {
     codeQualityAverage = 0
   } = userData;
   
-  // Weighted scoring algorithm
+  // More balanced scoring algorithm
   const score = (
-    (totalReviews * 10) +
-    (averageImprovement * 5) +
-    (level * 50) +
-    (streak * 15) +
-    (codeQualityAverage * 2)
+    (totalReviews * 15) +           // Increased weight for total reviews
+    (Math.min(averageImprovement, 100) * 3) + // Cap improvement at 100, reduce multiplier
+    (level * 40) +                  // Slightly reduced level impact
+    (Math.min(streak, 30) * 10) +   // Cap streak bonus, reduce multiplier
+    (Math.min(codeQualityAverage, 100) * 1.5) // Cap quality score, reduce multiplier
   );
   
   return Math.floor(score);

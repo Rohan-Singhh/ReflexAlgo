@@ -405,7 +405,21 @@ async function processReview(reviewId, subscription) {
 
     // Add XP based on improvement
     const improvementPercent = updatedReview.analysis.improvementPercentage || 50;
-    const xpGain = improvementPercent >= 70 ? 50 : 30;
+    
+    // More granular XP calculation
+    let xpGain;
+    if (improvementPercent >= 90) {
+      xpGain = 70;  // Exceptional improvement
+    } else if (improvementPercent >= 70) {
+      xpGain = 50;  // Significant improvement
+    } else if (improvementPercent >= 50) {
+      xpGain = 35;  // Moderate improvement
+    } else if (improvementPercent >= 30) {
+      xpGain = 20;  // Minor improvement
+    } else {
+      xpGain = 10;  // Minimal improvement
+    }
+    
     progress.addExperience(xpGain);
 
     // Update stats
