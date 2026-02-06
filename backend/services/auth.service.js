@@ -28,6 +28,8 @@ const EMAIL_REGEX = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
 const JWT_OPTIONS = { expiresIn: process.env.JWT_EXPIRE || '7d' };
 
+const normalizeUserId = (userId) => (userId ? userId.toString() : userId);
+
 // ⚡ OPTIMIZATION #7: Async cache cleanup (non-blocking)
 setInterval(() => {
   setImmediate(() => {
@@ -64,7 +66,8 @@ class AuthService {
 
   // ⚡ NEW: Get cached user by ID (for protect middleware)
   getCachedUserById(userId) {
-    const cached = userIdCache.get(userId);
+    const normalizedUserId = normalizeUserId(userId);
+    const cached = userIdCache.get(normalizedUserId);
     if (cached && Date.now() < cached.expiresAt) {
       return cached.user;
     }
@@ -89,7 +92,8 @@ class AuthService {
 
   clearUserCache(email, userId) {
     userCache.delete(email);
-    if (userId) userIdCache.delete(userId.toString());
+    const normalizedUserId = normalizeUserId(userId);
+    if (normalizedUserId) userIdCache.delete(normalizedUserId);
   }
 
   // ⚡ OPTIMIZATION #8: Inline validation (faster than function calls)
@@ -270,14 +274,15 @@ class AuthService {
 
   // ⚡ OPTIMIZED: Check cache first before DB query
   async getUserById(userId) {
+    const normalizedUserId = normalizeUserId(userId);
     // Check cache first
-    const cached = this.getCachedUserById(userId);
+    const cached = this.getCachedUserById(normalizedUserId);
     if (cached) {
       return cached;
     }
 
     // Cache miss - query database (only fetch needed fields!)
-    const user = await User.findById(userId)
+    const user = await User.findById(normalizedUserId)
       .select('_id name email profilePhoto') // ⚡ EXTREME: 30-50% faster query
       .lean(); // .lean() for speed
     
@@ -290,7 +295,7 @@ class AuthService {
       user,
       expiresAt: Date.now() + USER_CACHE_EXPIRY
     };
-    userIdCache.set(userId, cacheEntry);
+    userIdCache.set(normalizedUserId, cacheEntry);
 
     return user;
   }
