@@ -24,13 +24,6 @@ const Login = () => {
     }
   }, [location.state]);
 
-  const handleBackgroundClick = (e) => {
-    // Only navigate if clicking directly on the background, not on children
-    if (e.target === e.currentTarget) {
-      navigate('/');
-    }
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -138,8 +131,7 @@ const Login = () => {
 
   return (
     <div 
-      className="min-h-screen bg-black flex items-center justify-center px-4 py-12 cursor-pointer"
-      onClick={handleBackgroundClick}
+      className="min-h-screen bg-black flex items-center justify-center px-4 py-12"
     >
       {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -151,8 +143,7 @@ const Login = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="w-full max-w-md relative z-10 cursor-default"
-        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md relative z-10"
       >
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center mb-8">

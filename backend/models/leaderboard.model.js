@@ -62,7 +62,9 @@ leaderboardSchema.index({ period: 1, rank: 1 });
 
 // Static method to calculate score
 leaderboardSchema.statics.calculateScore = function(userData) {
-  const {
+  const {  
+
+    
     totalReviews = 0,
     averageImprovement = 0,
     level = 1,
