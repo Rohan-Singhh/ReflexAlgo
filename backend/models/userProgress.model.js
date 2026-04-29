@@ -83,6 +83,47 @@ const userProgressSchema = new mongoose.Schema({
       type: Date
     }
   }],
+  practice: {
+    solvedQuestions: [{
+      questionId: {
+        type: String,
+        required: true
+      },
+      title: {
+        type: String,
+        default: ''
+      },
+      platform: {
+        type: String,
+        default: ''
+      },
+      patternName: {
+        type: String,
+        default: ''
+      },
+      difficulty: {
+        type: String,
+        enum: ['Easy', 'Medium', 'Hard'],
+        default: 'Medium'
+      },
+      points: {
+        type: Number,
+        default: 0
+      },
+      solvedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
+    totalPoints: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    lastSolvedAt: {
+      type: Date
+    }
+  },
   achievements: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Achievement'
@@ -103,6 +144,7 @@ const userProgressSchema = new mongoose.Schema({
 userProgressSchema.index({ 'rank.global': 1 });
 userProgressSchema.index({ level: -1 });
 userProgressSchema.index({ experience: -1 });
+userProgressSchema.index({ user: 1, 'practice.solvedQuestions.questionId': 1 });
 
 // Method to add experience and level up
 userProgressSchema.methods.addExperience = function(xp) {

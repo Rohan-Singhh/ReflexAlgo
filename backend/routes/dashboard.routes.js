@@ -18,6 +18,12 @@ router.get('/reviews', dashboardController.getRecentReviews);
 // Get pattern progress
 router.get('/patterns', dashboardController.getPatternProgress);
 
+// Get solved DSA practice questions
+router.get('/practice-progress', dashboardController.getPracticeProgress);
+
+// Toggle solved state for a DSA practice question
+router.patch('/practice-progress/:questionId', dashboardController.updatePracticeProgress);
+
 // Get leaderboard
 router.get('/leaderboard', dashboardController.getLeaderboard);
 

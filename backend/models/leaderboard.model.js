@@ -62,6 +62,14 @@ const leaderboardSchema = new mongoose.Schema({
     lastSubmissionHash: {
       type: String,
       default: ''
+    },
+    practiceProblemsSolved: {
+      type: Number,
+      default: 0
+    },
+    practicePoints: {
+      type: Number,
+      default: 0
     }
   },
   lastUpdated: {

@@ -133,7 +133,7 @@ const Dashboard = memo(() => {
       });
       
       // ⚡ PROGRESSIVE STEP 3: Fetch secondary data (can be slower)
-      const allReviewsPromise = dashboardService.getRecentReviews(20).catch(err => {
+      const allReviewsPromise = dashboardService.getRecentReviews(120).catch(err => {
         console.warn('All reviews fetch failed:', err);
         return { data: [] };
       });

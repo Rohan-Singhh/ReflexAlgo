@@ -41,10 +41,30 @@ class DashboardService {
     }
   }
 
+  // Get solved DSA practice questions
+  async getPracticeProgress() {
+    try {
+      const response = await api.get('/dashboard/practice-progress');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || 'Failed to fetch practice progress';
+    }
+  }
+
+  // Toggle solved state for a DSA practice question
+  async updatePracticeProgress(questionId, payload) {
+    try {
+      const response = await api.patch(`/dashboard/practice-progress/${questionId}`, payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || 'Failed to update practice progress';
+    }
+  }
+
   // Get leaderboard
   async getLeaderboard(limit = 5, period = 'all-time', page = 1) {
     try {
-      const response = await api.get(`/dashboard/leaderboard?limit=${limit}&period=${period}&page=${page}`);
+      const response = await api.get(`/dashboard/leaderboard?limit=${limit}&period=${period}&page=${page}&_=${Date.now()}`);
       return response.data;
     } catch (error) {
       throw error.response?.data?.message || 'Failed to fetch leaderboard';

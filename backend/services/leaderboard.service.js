@@ -5,6 +5,8 @@ const MIN_K = 16;
 const MAX_K = 32;
 const IMPROVEMENT_WIN_THRESHOLD = 5;
 const LOW_QUALITY_FORCE_LOSS_THRESHOLD = 40;
+const GOOD_IMPROVEMENT_THRESHOLD = 30;
+const GOOD_QUALITY_THRESHOLD = 70;
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -15,13 +17,17 @@ function computeContributionScore({
   averageImprovement = 0,
   level = 1,
   streak = 0,
-  codeQualityAverage = 0
+  codeQualityAverage = 0,
+  practicePoints = 0
 }) {
   const reviewsScore = Math.log10(Math.max(0, totalReviews) + 1) / 3;
   const improvementScore = clamp(averageImprovement, 0, 100) / 100;
   const levelScore = clamp(level, 0, 10) / 10;
   const streakScore = Math.sqrt(clamp(streak, 0, 30)) / Math.sqrt(30);
   const qualityScore = clamp(codeQualityAverage, 0, 100) / 100;
+  // Final score uses 30% contribution, so scale practice here to make
+  // a 20-point solve show as +20 leaderboard points.
+  const practiceBonus = clamp(practicePoints, 0, 1000) / 0.3;
 
   const weightedSum =
     (reviewsScore * 0.2) +
@@ -30,7 +36,7 @@ function computeContributionScore({
     (streakScore * 0.15) +
     (qualityScore * 0.2);
 
-  return Math.round(weightedSum * 1000);
+  return Math.round((weightedSum * 1000) + practiceBonus);
 }
 
 function computeExpectedScore(playerRating, opponentRating) {
@@ -84,11 +90,15 @@ function determineMatchOutcome({
     return { actualScore: 0, reason: 'low-quality-force-loss' };
   }
 
+  if (Number(improvement || 0) >= GOOD_IMPROVEMENT_THRESHOLD || Number(quality || 0) >= GOOD_QUALITY_THRESHOLD) {
+    return { actualScore: 1, reason: 'healthy-review-win' };
+  }
+
   const previousImprovement = Number(previousReview?.analysis?.improvementPercentage || 0);
   const delta = Number(improvement || 0) - previousImprovement;
   const win = delta >= IMPROVEMENT_WIN_THRESHOLD;
 
-  return { actualScore: win ? 1 : 0, reason: win ? 'threshold-win' : 'threshold-loss' };
+  return { actualScore: win ? 1 : null, reason: win ? 'threshold-win' : 'neutral-review' };
 }
 
 module.exports = {

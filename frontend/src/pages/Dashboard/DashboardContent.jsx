@@ -1,15 +1,128 @@
 import { memo, useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Upload, Clock, CheckCircle, Code2, ArrowRight, Sparkles, Trophy, TrendingUp, Activity, Zap, ArrowUp } from 'lucide-react';
+import { Upload, Clock, CheckCircle, Code2, ArrowRight, Sparkles, Trophy, TrendingUp, Zap, ArrowUp, ExternalLink, CalendarDays, Flame } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import dashboardService from '../../services/dashboardService';
 
+const PRACTICE_PROGRESS_KEY = 'reflexalgo_dsa_practice_progress';
+
+const patternPracticeCatalog = [
+  {
+    name: 'Sliding Window',
+    label: 'SW',
+    color: 'from-blue-500 to-cyan-500',
+    questions: [
+      { id: 'sw-longest-substring', title: 'Longest Substring Without Repeating Characters', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/longest-substring-without-repeating-characters/' },
+      { id: 'sw-min-window', title: 'Minimum Window Substring', platform: 'LeetCode', difficulty: 'Hard', url: 'https://leetcode.com/problems/minimum-window-substring/' },
+      { id: 'sw-character-replacement', title: 'Longest Repeating Character Replacement', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/longest-repeating-character-replacement/' },
+      { id: 'sw-fruits', title: 'Fruit Into Baskets', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/fruit-into-baskets/' },
+      { id: 'sw-books', title: 'Books', platform: 'Codeforces', difficulty: 'Medium', url: 'https://codeforces.com/problemset/problem/279/B' },
+      { id: 'sw-max-vowels', title: 'Maximum Number of Vowels in a Substring', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/maximum-number-of-vowels-in-a-substring-of-given-length/' },
+      { id: 'sw-permutation-string', title: 'Permutation in String', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/permutation-in-string/' },
+      { id: 'sw-subarray-product', title: 'Subarray Product Less Than K', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/subarray-product-less-than-k/' },
+      { id: 'sw-max-consecutive-ones', title: 'Max Consecutive Ones III', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/max-consecutive-ones-iii/' },
+      { id: 'sw-cellular-network', title: 'Cellular Network', platform: 'Codeforces', difficulty: 'Medium', url: 'https://codeforces.com/problemset/problem/702/C' },
+      { id: 'sw-min-size-subarray-sum', title: 'Minimum Size Subarray Sum', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/minimum-size-subarray-sum/' },
+      { id: 'sw-repeated-dna', title: 'Repeated DNA Sequences', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/repeated-dna-sequences/' },
+      { id: 'sw-find-anagrams', title: 'Find All Anagrams in a String', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/find-all-anagrams-in-a-string/' },
+      { id: 'sw-grumpy-bookstore', title: 'Grumpy Bookstore Owner', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/grumpy-bookstore-owner/' },
+      { id: 'sw-contains-duplicate-ii', title: 'Contains Duplicate II', platform: 'LeetCode', difficulty: 'Easy', url: 'https://leetcode.com/problems/contains-duplicate-ii/' },
+      { id: 'sw-k-good-segment', title: 'K-Good Segment', platform: 'Codeforces', difficulty: 'Medium', url: 'https://codeforces.com/problemset/problem/616/D' },
+      { id: 'sw-segment-occurrences', title: 'Segment Occurrences', platform: 'Codeforces', difficulty: 'Easy', url: 'https://codeforces.com/problemset/problem/1016/B' },
+      { id: 'sw-strsub', title: 'Count Substrings', platform: 'CodeChef', difficulty: 'Medium', url: 'https://www.codechef.com/problems/STRSUB' },
+      { id: 'sw-first-negative-window', title: 'First Negative Integer in Every Window', platform: '450 DSA', difficulty: 'Medium', url: 'https://450dsa.com/' },
+      { id: 'sw-sum-min-max-window', title: 'Sum of Min and Max of All Subarrays', platform: '450 DSA', difficulty: 'Hard', url: 'https://450dsa.com/' },
+    ],
+  },
+  {
+    name: 'Two Pointers',
+    label: 'TP',
+    color: 'from-purple-500 to-pink-500',
+    questions: [
+      { id: 'tp-two-sum-ii', title: 'Two Sum II - Input Array Is Sorted', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/' },
+      { id: 'tp-container-water', title: 'Container With Most Water', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/container-with-most-water/' },
+      { id: 'tp-3sum', title: '3Sum', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/3sum/' },
+      { id: 'tp-trapping-rain', title: 'Trapping Rain Water', platform: 'LeetCode', difficulty: 'Hard', url: 'https://leetcode.com/problems/trapping-rain-water/' },
+      { id: 'tp-kuriyama', title: 'Kuriyama Mirai Stones', platform: 'Codeforces', difficulty: 'Easy', url: 'https://codeforces.com/problemset/problem/433/B' },
+      { id: 'tp-valid-palindrome', title: 'Valid Palindrome', platform: 'LeetCode', difficulty: 'Easy', url: 'https://leetcode.com/problems/valid-palindrome/' },
+      { id: 'tp-remove-duplicates', title: 'Remove Duplicates from Sorted Array', platform: 'LeetCode', difficulty: 'Easy', url: 'https://leetcode.com/problems/remove-duplicates-from-sorted-array/' },
+      { id: 'tp-sort-colors', title: 'Sort Colors', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/sort-colors/' },
+      { id: 'tp-4sum', title: '4Sum', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/4sum/' },
+      { id: 'tp-alice-bob-chocolate', title: 'Alice, Bob and Chocolate', platform: 'Codeforces', difficulty: 'Easy', url: 'https://codeforces.com/problemset/problem/6/C' },
+      { id: 'tp-squares-sorted-array', title: 'Squares of a Sorted Array', platform: 'LeetCode', difficulty: 'Easy', url: 'https://leetcode.com/problems/squares-of-a-sorted-array/' },
+      { id: 'tp-backspace-string', title: 'Backspace String Compare', platform: 'LeetCode', difficulty: 'Easy', url: 'https://leetcode.com/problems/backspace-string-compare/' },
+      { id: 'tp-merge-sorted-array', title: 'Merge Sorted Array', platform: 'LeetCode', difficulty: 'Easy', url: 'https://leetcode.com/problems/merge-sorted-array/' },
+      { id: 'tp-move-zeroes', title: 'Move Zeroes', platform: 'LeetCode', difficulty: 'Easy', url: 'https://leetcode.com/problems/move-zeroes/' },
+      { id: 'tp-boats-rescue', title: 'Boats to Save People', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/boats-to-save-people/' },
+      { id: 'tp-pair-sum', title: 'Pair Sum in a Sorted Array', platform: '450 DSA', difficulty: 'Easy', url: 'https://450dsa.com/' },
+      { id: 'tp-tachstck', title: 'Chopsticks', platform: 'CodeChef', difficulty: 'Easy', url: 'https://www.codechef.com/problems/TACHSTCK' },
+      { id: 'tp-array-merge', title: 'Merging Arrays', platform: 'Codeforces', difficulty: 'Easy', url: 'https://codeforces.com/edu/course/2/lesson/9/1/practice/contest/307092/problem/A' },
+      { id: 'tp-number-of-smaller', title: 'Number of Smaller', platform: 'Codeforces', difficulty: 'Easy', url: 'https://codeforces.com/edu/course/2/lesson/9/1/practice/contest/307092/problem/B' },
+      { id: 'tp-subsegments-small-sum', title: 'Segments with Small Sum', platform: 'Codeforces', difficulty: 'Medium', url: 'https://codeforces.com/edu/course/2/lesson/9/2/practice/contest/307093/problem/A' },
+    ],
+  },
+  {
+    name: 'Binary Search',
+    label: 'BS',
+    color: 'from-emerald-500 to-green-500',
+    questions: [
+      { id: 'bs-rotated-array', title: 'Search in Rotated Sorted Array', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/search-in-rotated-sorted-array/' },
+      { id: 'bs-min-rotated', title: 'Find Minimum in Rotated Sorted Array', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/' },
+      { id: 'bs-koko', title: 'Koko Eating Bananas', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/koko-eating-bananas/' },
+      { id: 'bs-median', title: 'Median of Two Sorted Arrays', platform: 'LeetCode', difficulty: 'Hard', url: 'https://leetcode.com/problems/median-of-two-sorted-arrays/' },
+      { id: 'bs-magic-powder', title: 'Magic Powder - 1', platform: 'Codeforces', difficulty: 'Medium', url: 'https://codeforces.com/problemset/problem/670/D1' },
+      { id: 'bs-search-2d', title: 'Search a 2D Matrix', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/search-a-2d-matrix/' },
+      { id: 'bs-time-map', title: 'Time Based Key-Value Store', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/time-based-key-value-store/' },
+      { id: 'bs-peak-element', title: 'Find Peak Element', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/find-peak-element/' },
+      { id: 'bs-split-array', title: 'Split Array Largest Sum', platform: 'LeetCode', difficulty: 'Hard', url: 'https://leetcode.com/problems/split-array-largest-sum/' },
+      { id: 'bs-hamburgers', title: 'Hamburgers', platform: 'Codeforces', difficulty: 'Medium', url: 'https://codeforces.com/problemset/problem/371/C' },
+      { id: 'bs-search-range', title: 'Find First and Last Position', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/' },
+      { id: 'bs-search-insert', title: 'Search Insert Position', platform: 'LeetCode', difficulty: 'Easy', url: 'https://leetcode.com/problems/search-insert-position/' },
+      { id: 'bs-arranging-coins', title: 'Arranging Coins', platform: 'LeetCode', difficulty: 'Easy', url: 'https://leetcode.com/problems/arranging-coins/' },
+      { id: 'bs-capacity-ship', title: 'Capacity To Ship Packages Within D Days', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/' },
+      { id: 'bs-min-days-bouquets', title: 'Minimum Number of Days to Make Bouquets', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/minimum-number-of-days-to-make-m-bouquets/' },
+      { id: 'bs-aggressive-cows', title: 'Aggressive Cows', platform: 'CodeChef', difficulty: 'Medium', url: 'https://www.codechef.com/problems/AGGRCOW' },
+      { id: 'bs-rope-cutting', title: 'Ropes', platform: 'Codeforces', difficulty: 'Medium', url: 'https://codeforces.com/edu/course/2/lesson/6/2/practice/contest/283932/problem/A' },
+      { id: 'bs-very-easy-task', title: 'Very Easy Task', platform: 'Codeforces', difficulty: 'Medium', url: 'https://codeforces.com/edu/course/2/lesson/6/2/practice/contest/283932/problem/C' },
+      { id: 'bs-square-root', title: 'Square Root of an Integer', platform: '450 DSA', difficulty: 'Easy', url: 'https://450dsa.com/' },
+      { id: 'bs-painters-partition', title: 'Painter\'s Partition Problem', platform: '450 DSA', difficulty: 'Hard', url: 'https://450dsa.com/' },
+    ],
+  },
+  {
+    name: 'Dynamic Programming',
+    label: 'DP',
+    color: 'from-orange-500 to-red-500',
+    questions: [
+      { id: 'dp-climbing-stairs', title: 'Climbing Stairs', platform: 'LeetCode', difficulty: 'Easy', url: 'https://leetcode.com/problems/climbing-stairs/' },
+      { id: 'dp-house-robber', title: 'House Robber', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/house-robber/' },
+      { id: 'dp-coin-change', title: 'Coin Change', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/coin-change/' },
+      { id: 'dp-lis', title: 'Longest Increasing Subsequence', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/longest-increasing-subsequence/' },
+      { id: 'dp-vacation', title: 'Vacation', platform: 'Codeforces', difficulty: 'Medium', url: 'https://codeforces.com/problemset/problem/698/A' },
+      { id: 'dp-decode-ways', title: 'Decode Ways', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/decode-ways/' },
+      { id: 'dp-word-break', title: 'Word Break', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/word-break/' },
+      { id: 'dp-partition-subset', title: 'Partition Equal Subset Sum', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/partition-equal-subset-sum/' },
+      { id: 'dp-edit-distance', title: 'Edit Distance', platform: 'LeetCode', difficulty: 'Hard', url: 'https://leetcode.com/problems/edit-distance/' },
+      { id: 'dp-boredom', title: 'Boredom', platform: 'Codeforces', difficulty: 'Medium', url: 'https://codeforces.com/problemset/problem/455/A' },
+      { id: 'dp-unique-paths', title: 'Unique Paths', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/unique-paths/' },
+      { id: 'dp-min-path-sum', title: 'Minimum Path Sum', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/minimum-path-sum/' },
+      { id: 'dp-longest-common-subsequence', title: 'Longest Common Subsequence', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/longest-common-subsequence/' },
+      { id: 'dp-palindromic-substrings', title: 'Palindromic Substrings', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/palindromic-substrings/' },
+      { id: 'dp-maximal-square', title: 'Maximal Square', platform: 'LeetCode', difficulty: 'Medium', url: 'https://leetcode.com/problems/maximal-square/' },
+      { id: 'dp-coins', title: 'Bytelandian Gold Coins', platform: 'CodeChef', difficulty: 'Medium', url: 'https://www.codechef.com/problems/COINS' },
+      { id: 'dp-farida', title: 'Princess Farida', platform: 'CodeChef', difficulty: 'Medium', url: 'https://www.codechef.com/problems/FARIDA' },
+      { id: 'dp-flowers', title: 'Flowers', platform: 'Codeforces', difficulty: 'Medium', url: 'https://codeforces.com/problemset/problem/474/D' },
+      { id: 'dp-equal-partition', title: 'Subset Sum / Equal Partition', platform: '450 DSA', difficulty: 'Medium', url: 'https://450dsa.com/' },
+      { id: 'dp-knapsack', title: '0/1 Knapsack', platform: '450 DSA', difficulty: 'Medium', url: 'https://450dsa.com/' },
+    ],
+  },
+];
+
 const dsa_patterns_default = [
-  { name: 'Sliding Window', mastery: 0, reviews: 0, solved: 0, total: 10, emoji: '🪟', color: 'from-blue-500 to-cyan-500' },
-  { name: 'Two Pointers', mastery: 0, reviews: 0, solved: 0, total: 10, emoji: '👉', color: 'from-purple-500 to-pink-500' },
-  { name: 'Binary Search', mastery: 0, reviews: 0, solved: 0, total: 10, emoji: '🔍', color: 'from-emerald-500 to-green-500' },
-  { name: 'Dynamic Programming', mastery: 0, reviews: 0, solved: 0, total: 10, emoji: '🧮', color: 'from-orange-500 to-red-500' },
+  { name: 'Sliding Window', mastery: 0, reviews: 0, solved: 0, total: 20, emoji: '🪟', color: 'from-blue-500 to-cyan-500' },
+  { name: 'Two Pointers', mastery: 0, reviews: 0, solved: 0, total: 20, emoji: '👉', color: 'from-purple-500 to-pink-500' },
+  { name: 'Binary Search', mastery: 0, reviews: 0, solved: 0, total: 20, emoji: '🔍', color: 'from-emerald-500 to-green-500' },
+  { name: 'Dynamic Programming', mastery: 0, reviews: 0, solved: 0, total: 20, emoji: '🧮', color: 'from-orange-500 to-red-500' },
 ];
 
 const defaultLeaderboard = [
@@ -17,6 +130,355 @@ const defaultLeaderboard = [
 ];
 
 const getPatternReviewCount = (pattern) => pattern.reviews ?? pattern.solved ?? 0;
+
+const getDifficultyClass = (difficulty) => {
+  if (difficulty === 'Easy') return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
+  if (difficulty === 'Hard') return 'bg-red-500/10 border-red-500/20 text-red-400';
+  return 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400';
+};
+
+const getPracticeQuestionPoints = (difficulty) => {
+  if (difficulty === 'Easy') return 10;
+  if (difficulty === 'Hard') return 35;
+  return 20;
+};
+
+const ACTIVITY_DAYS = 112;
+
+const getDateKey = (value) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getActivityTone = (count) => {
+  if (count >= 6) return 'bg-emerald-300 shadow-lg shadow-emerald-400/25 border-emerald-200/30';
+  if (count >= 4) return 'bg-emerald-500 shadow-md shadow-emerald-500/20 border-emerald-300/20';
+  if (count >= 2) return 'bg-cyan-500 shadow-md shadow-cyan-500/20 border-cyan-300/20';
+  if (count === 1) return 'bg-sky-700 border-sky-400/20';
+  return 'bg-[#1F2933] border-white/[0.06] hover:bg-[#293541]';
+};
+
+const formatActivityDate = (dateKey) => {
+  if (!dateKey) return 'select a day';
+  return new Date(`${dateKey}T00:00:00`).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+const buildActivityDays = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(today);
+  start.setDate(today.getDate() - (ACTIVITY_DAYS - 1));
+
+  return Array.from({ length: ACTIVITY_DAYS }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return {
+      date,
+      key: getDateKey(date),
+      dayLabel: date.toLocaleDateString(undefined, { weekday: 'short' }),
+      monthLabel: date.toLocaleDateString(undefined, { month: 'short' }),
+    };
+  });
+};
+
+const ActivityHeatmap = memo(({ reviews, solvedQuestions }) => {
+  const [mode, setMode] = useState('all');
+  const [selectedDayKey, setSelectedDayKey] = useState(() => getDateKey(new Date()));
+  const modeMeta = {
+    all: { label: 'All activity', accent: 'from-cyan-400 to-emerald-300' },
+    reviews: { label: 'Code reviews', accent: 'from-purple-400 to-fuchsia-300' },
+    practice: { label: 'Practice solves', accent: 'from-cyan-400 to-blue-300' },
+  };
+
+  const activityDays = useMemo(() => buildActivityDays(), []);
+  const activityByDay = useMemo(() => {
+    const map = new Map();
+    const ensureDay = (dateKey) => {
+      if (!dateKey) return null;
+      if (!map.has(dateKey)) {
+        map.set(dateKey, { reviews: [], practice: [] });
+      }
+      return map.get(dateKey);
+    };
+
+    reviews.forEach((review) => {
+      const dateKey = getDateKey(review.createdAt || review.completedAt);
+      const day = ensureDay(dateKey);
+      if (day) day.reviews.push(review);
+    });
+
+    solvedQuestions.forEach((question) => {
+      const dateKey = getDateKey(question.solvedAt);
+      const day = ensureDay(dateKey);
+      if (day) day.practice.push(question);
+    });
+
+    return map;
+  }, [reviews, solvedQuestions]);
+
+  const visibleActivityDays = useMemo(() => (
+    activityDays.map((day) => {
+      const activity = activityByDay.get(day.key) || { reviews: [], practice: [] };
+      const reviewsCount = activity.reviews.length;
+      const practiceCount = activity.practice.length;
+      const count = mode === 'reviews' ? reviewsCount : mode === 'practice' ? practiceCount : reviewsCount + practiceCount;
+
+      return {
+        ...day,
+        reviewsCount,
+        practiceCount,
+        count,
+      };
+    })
+  ), [activityByDay, activityDays, mode]);
+
+  const weeks = useMemo(() => {
+    const grouped = [];
+    for (let index = 0; index < visibleActivityDays.length; index += 7) {
+      grouped.push(visibleActivityDays.slice(index, index + 7));
+    }
+    return grouped;
+  }, [visibleActivityDays]);
+
+  const selectedActivity = activityByDay.get(selectedDayKey) || { reviews: [], practice: [] };
+  const selectedItems = [
+    ...selectedActivity.reviews.map((item) => ({ type: 'review', label: item.title || 'Code review' })),
+    ...selectedActivity.practice.map((item) => ({ type: 'practice', label: item.title || item.questionId || 'Practice solve' })),
+  ];
+  const activeDays = visibleActivityDays.filter((day) => day.count > 0).length;
+  const totalActivity = visibleActivityDays.reduce((sum, day) => sum + day.count, 0);
+  const busiestDay = visibleActivityDays.reduce((best, day) => day.count > best.count ? day : best, visibleActivityDays[0]);
+  const currentStreak = [...visibleActivityDays].reverse().reduce((streak, day) => {
+    if (streak.done) return streak;
+    if (day.count > 0) return { count: streak.count + 1, done: false };
+    return streak.count > 0 ? { ...streak, done: true } : streak;
+  }, { count: 0, done: false }).count;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
+      className="relative overflow-hidden bg-[#0D1117] border border-white/10 rounded-3xl"
+    >
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-emerald-300 to-purple-400" />
+      <div className="p-6 lg:p-8">
+        <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6 mb-7">
+          <div className="min-w-0">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center">
+                <CalendarDays className="w-7 h-7 text-cyan-200" />
+              </div>
+              <div>
+                <h2 className="text-3xl lg:text-4xl font-bold text-white">streak graph</h2>
+                <p className="text-gray-400 text-sm">your coding pulse across reviews and DSA practice</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl">
+              {[
+                { label: 'current streak', value: currentStreak, suffix: 'd', icon: Flame },
+                { label: 'active days', value: activeDays, suffix: '', icon: TrendingUp },
+                { label: modeMeta[mode].label, value: totalActivity, suffix: '', icon: Zap },
+              ].map((stat) => {
+                const Icon = stat.icon;
+                return (
+                  <div key={stat.label} className="rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3">
+                    <div className="flex items-center gap-2 text-gray-400 mb-2">
+                      <Icon className="w-4 h-4" />
+                      <span className="text-[11px] uppercase tracking-wider">{stat.label}</span>
+                    </div>
+                    <p className="text-2xl font-bold text-white">{stat.value}{stat.suffix}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex xl:flex-col gap-3 xl:items-end">
+            <div className="inline-flex p-1 rounded-2xl bg-black/30 border border-white/10">
+              {[
+                { id: 'all', label: 'all' },
+                { id: 'reviews', label: 'reviews' },
+                { id: 'practice', label: 'practice' },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setMode(item.id)}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${mode === item.id ? 'bg-white text-black shadow-lg shadow-white/10' : 'text-gray-400 hover:text-white'}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <div className="hidden xl:flex items-center gap-2 text-xs text-gray-500">
+              <span>less</span>
+              {[0, 1, 2, 4, 6].map((count) => (
+                <span key={count} className={`w-4 h-4 rounded-md border ${getActivityTone(count)}`} />
+              ))}
+              <span>more</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+          <div className="min-w-0 rounded-2xl bg-black/20 border border-white/10 p-5">
+            <div className="flex items-center justify-between gap-4 mb-5">
+              <div>
+                <p className={`text-sm font-semibold bg-gradient-to-r ${modeMeta[mode].accent} bg-clip-text text-transparent`}>
+                  {modeMeta[mode].label}
+                </p>
+                <p className="text-xs text-gray-500">last 16 weeks</p>
+              </div>
+              <div className="flex xl:hidden items-center gap-2 text-xs text-gray-500">
+                <span>less</span>
+                {[0, 1, 2, 4, 6].map((count) => (
+                  <span key={count} className={`w-3.5 h-3.5 rounded border ${getActivityTone(count)}`} />
+                ))}
+                <span>more</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-[32px_1fr] gap-3">
+              <div className="grid grid-rows-7 gap-2 pt-7 text-[11px] text-gray-500">
+                <span />
+                <span>Mon</span>
+                <span />
+                <span>Wed</span>
+                <span />
+                <span>Fri</span>
+                <span />
+              </div>
+
+              <div className="overflow-x-auto pb-2">
+                <div className="flex gap-2 min-w-max">
+                  {weeks.map((week, weekIndex) => {
+                    const firstDay = week[0];
+                    const showMonth = weekIndex === 0 || firstDay.date.getDate() <= 7;
+
+                    return (
+                      <div key={firstDay.key} className="flex-shrink-0">
+                        <div className="h-5 mb-2 text-[11px] font-medium text-gray-400">
+                          {showMonth ? firstDay.monthLabel : ''}
+                        </div>
+                        <div className="grid grid-rows-7 gap-2">
+                          {week.map((day) => (
+                            <button
+                              key={day.key}
+                              type="button"
+                              title={`${formatActivityDate(day.key)}: ${day.reviewsCount} reviews, ${day.practiceCount} practice solves`}
+                              onClick={() => setSelectedDayKey(day.key)}
+                              className={`w-4 h-4 rounded-md border transition-all ${getActivityTone(day.count)} ${selectedDayKey === day.key ? 'ring-2 ring-white ring-offset-2 ring-offset-[#0D1117] scale-110' : 'hover:scale-125'}`}
+                              aria-label={`${formatActivityDate(day.key)} activity`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white/[0.06] border border-white/10 p-5">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <p className="text-sm text-gray-400 mb-1">selected day</p>
+                <h3 className="text-2xl font-bold text-white">{formatActivityDate(selectedDayKey)}</h3>
+              </div>
+              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${modeMeta[mode].accent} flex items-center justify-center text-black font-bold`}>
+                {selectedItems.length}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="rounded-2xl bg-purple-500/10 border border-purple-400/20 p-4">
+                <p className="text-2xl font-bold text-white">{selectedActivity.reviews.length}</p>
+                <p className="text-xs text-purple-200">reviews</p>
+              </div>
+              <div className="rounded-2xl bg-cyan-500/10 border border-cyan-400/20 p-4">
+                <p className="text-2xl font-bold text-white">{selectedActivity.practice.length}</p>
+                <p className="text-xs text-cyan-200">practice</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+              {selectedItems.length > 0 ? (
+                selectedItems.map((item, index) => (
+                  <div key={`${item.type}-${index}`} className="flex items-center gap-3 rounded-xl bg-black/20 border border-white/5 px-3 py-2 text-sm">
+                    <span className={`w-2.5 h-2.5 rounded-full ${item.type === 'review' ? 'bg-purple-300' : 'bg-cyan-300'}`} />
+                    <span className="text-gray-200 truncate">{item.label}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-xl bg-black/20 border border-dashed border-white/10 px-4 py-6 text-center">
+                  <p className="text-sm text-gray-400">no activity recorded</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 pt-5 border-t border-white/10">
+              <p className="text-xs text-gray-500">busiest day</p>
+              <p className="text-sm text-gray-300">{busiestDay?.count || 0} actions on {formatActivityDate(busiestDay?.key)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+
+ActivityHeatmap.displayName = 'ActivityHeatmap';
+
+const PracticeQuestionRow = memo(({ question, isSolved, onToggle }) => (
+  <div className={`flex items-center gap-3 rounded-2xl border p-3 transition-all duration-150 ${isSolved ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+    <button
+      type="button"
+      onClick={() => onToggle(question.id)}
+      className={`flex-shrink-0 w-6 h-6 rounded-lg border flex items-center justify-center transition-all duration-150 ${isSolved ? 'bg-emerald-500 border-emerald-400 text-white' : 'border-white/20 hover:border-emerald-400 text-transparent'}`}
+      aria-label={isSolved ? `mark ${question.title} unsolved` : `mark ${question.title} solved`}
+    >
+      <CheckCircle className="w-4 h-4" />
+    </button>
+    <div className="flex-1 min-w-0">
+      <p className={`text-sm font-semibold truncate ${isSolved ? 'text-emerald-300 line-through decoration-emerald-500/60' : 'text-white'}`}>
+        {question.title}
+      </p>
+      <div className="flex flex-wrap items-center gap-2 mt-2">
+        <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] font-medium text-gray-400">
+          {question.platform}
+        </span>
+        <span className={`px-2 py-1 rounded-lg border text-[11px] font-medium ${getDifficultyClass(question.difficulty)}`}>
+          {question.difficulty}
+        </span>
+        <span className="px-2 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-[11px] font-medium text-cyan-300">
+          +{getPracticeQuestionPoints(question.difficulty)} pts
+        </span>
+      </div>
+    </div>
+    <a
+      href={question.url}
+      target="_blank"
+      rel="noreferrer"
+      className="flex-shrink-0 p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition-all duration-150"
+      aria-label={`open ${question.title}`}
+    >
+      <ExternalLink className="w-4 h-4" />
+    </a>
+  </div>
+));
+
+PracticeQuestionRow.displayName = 'PracticeQuestionRow';
 
 // ⚡ Memoized Leaderboard Item for better performance
 const LeaderboardItem = memo(({ user, index, isCompact = false }) => {
@@ -68,37 +530,6 @@ const LeaderboardItem = memo(({ user, index, isCompact = false }) => {
 
 LeaderboardItem.displayName = 'LeaderboardItem';
 
-const RatingDeltaBadge = memo(({ scoreChange, scoreAfter, compact = false }) => {
-  if (scoreChange === null || scoreChange === undefined) return null;
-
-  const roundedChange = Math.round(Number(scoreChange) || 0);
-  const isPositive = roundedChange > 0;
-  const isNegative = roundedChange < 0;
-  const label = `${isPositive ? '+' : ''}${roundedChange}`;
-  const Icon = isPositive ? TrendingUp : Activity;
-
-  const toneClass = isPositive
-    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-    : isNegative
-    ? 'bg-red-500/10 border-red-500/20 text-red-400'
-    : 'bg-white/5 border-white/10 text-gray-400';
-
-  return (
-    <div className={`inline-flex items-center gap-2 border ${toneClass} ${compact ? 'px-3 py-1.5 rounded-xl' : 'px-4 py-2 rounded-2xl'}`}>
-      <Icon className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
-      <div>
-        <p className="text-[10px] uppercase tracking-wider opacity-70 leading-none mb-1">points</p>
-        <p className={`${compact ? 'text-sm' : 'text-lg'} font-bold leading-none`}>
-          {label}
-          {scoreAfter ? <span className="ml-1 text-xs font-medium opacity-70">({Math.round(scoreAfter)})</span> : null}
-        </p>
-      </div>
-    </div>
-  );
-});
-
-RatingDeltaBadge.displayName = 'RatingDeltaBadge';
-
 const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOpenUpload, allReviews, setActiveTab }) => {
   const navigate = useNavigate();
   // Only show real reviews from database, no dummy data
@@ -106,6 +537,18 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
   const dsa_patterns = Array.isArray(patterns) && patterns.length > 0 ? patterns : dsa_patterns_default;
   const safeAllReviews = Array.isArray(allReviews) ? allReviews : [];
   const safeLeaderboard = Array.isArray(leaderboard) ? leaderboard : [];
+  const [solvedPracticeIds, setSolvedPracticeIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem(PRACTICE_PROGRESS_KEY);
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [solvedPracticeQuestions, setSolvedPracticeQuestions] = useState([]);
+  const [practicePoints, setPracticePoints] = useState(0);
+  const [isSyncingPractice, setIsSyncingPractice] = useState(false);
   
   // ⚡ Infinite scroll for reviews tab
   const [visibleReviewsCount, setVisibleReviewsCount] = useState(10);
@@ -114,6 +557,7 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
   
   // ⚡⚡⚡ OPTIMIZED: Paginated leaderboard with infinite scroll
   const [fullLeaderboard, setFullLeaderboard] = useState([]);
+  const [leaderboardPreview, setLeaderboardPreview] = useState(safeLeaderboard);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [leaderboardPage, setLeaderboardPage] = useState(1);
@@ -128,6 +572,149 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
   
   // ⚡ Show scroll-to-top button when user scrolls down
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem(PRACTICE_PROGRESS_KEY, JSON.stringify(solvedPracticeIds));
+  }, [solvedPracticeIds]);
+
+  useEffect(() => {
+    setLeaderboardPreview(safeLeaderboard);
+  }, [safeLeaderboard]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPracticeProgress = async () => {
+      try {
+        const response = await dashboardService.getPracticeProgress();
+        if (!isMounted) return;
+        const solvedQuestions = response.data?.solvedQuestions || [];
+        setSolvedPracticeQuestions(solvedQuestions);
+        setSolvedPracticeIds(response.data?.solvedIds || solvedQuestions.map((question) => question.questionId));
+        setPracticePoints(response.data?.totalPoints || 0);
+      } catch (error) {
+        console.error('Failed to fetch practice progress:', error);
+      }
+    };
+
+    loadPracticeProgress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const togglePracticeQuestion = useCallback(async (questionId) => {
+    const currentSolved = solvedPracticeIds.includes(questionId);
+    const nextSolved = !currentSolved;
+    const questionContext = patternPracticeCatalog.reduce((found, pattern) => {
+      if (found) return found;
+      const question = pattern.questions.find((item) => item.id === questionId);
+      return question ? { ...question, patternName: pattern.name } : null;
+    }, null);
+
+    setSolvedPracticeIds((current) => (
+      nextSolved
+        ? [...new Set([...current, questionId])]
+        : current.filter((id) => id !== questionId)
+    ));
+    setSolvedPracticeQuestions((current) => (
+      nextSolved
+        ? [
+            ...current.filter((item) => item.questionId !== questionId),
+            {
+              questionId,
+              title: questionContext?.title || '',
+              platform: questionContext?.platform || '',
+              patternName: questionContext?.patternName || '',
+              difficulty: questionContext?.difficulty || 'Medium',
+              points: getPracticeQuestionPoints(questionContext?.difficulty),
+              solvedAt: new Date().toISOString(),
+            },
+          ]
+        : current.filter((item) => item.questionId !== questionId)
+    ));
+    setPracticePoints((current) => Math.max(
+      0,
+      current + (nextSolved ? 1 : -1) * getPracticeQuestionPoints(questionContext?.difficulty)
+    ));
+    setIsSyncingPractice(true);
+
+    try {
+      const response = await dashboardService.updatePracticeProgress(questionId, {
+        solved: nextSolved,
+        question: questionContext
+      });
+      const solvedQuestions = response.data?.solvedQuestions || [];
+      setSolvedPracticeQuestions(solvedQuestions);
+      setSolvedPracticeIds(response.data?.solvedIds || solvedQuestions.map((item) => item.questionId));
+      setPracticePoints(response.data?.totalPoints || 0);
+      try {
+        const previewResponse = await dashboardService.getLeaderboard(5, 'all-time', 1);
+        setLeaderboardPreview(previewResponse.data || []);
+        if (activeTab === 'leaderboard') {
+          const leaderboardResponse = await dashboardService.getLeaderboard(LEADERBOARD_PAGE_SIZE, 'all-time', 1);
+          setFullLeaderboard(leaderboardResponse.data || []);
+          setHasMoreLeaderboard(leaderboardResponse.pagination?.hasMore || false);
+        } else {
+          setFullLeaderboard([]);
+          setHasMoreLeaderboard(true);
+        }
+      } catch (leaderboardError) {
+        console.error('Failed to refresh leaderboard after practice update:', leaderboardError);
+      }
+      setLeaderboardPage(1);
+    } catch (error) {
+      console.error('Failed to update practice progress:', error);
+      setSolvedPracticeIds((current) => (
+        currentSolved
+          ? [...new Set([...current, questionId])]
+          : current.filter((id) => id !== questionId)
+      ));
+      setSolvedPracticeQuestions((current) => (
+        currentSolved
+          ? [
+              ...current.filter((item) => item.questionId !== questionId),
+              {
+                questionId,
+                title: questionContext?.title || '',
+                platform: questionContext?.platform || '',
+                patternName: questionContext?.patternName || '',
+                difficulty: questionContext?.difficulty || 'Medium',
+                points: getPracticeQuestionPoints(questionContext?.difficulty),
+                solvedAt: new Date().toISOString(),
+              },
+            ]
+          : current.filter((item) => item.questionId !== questionId)
+      ));
+      setPracticePoints((current) => Math.max(
+        0,
+        current + (currentSolved ? 1 : -1) * getPracticeQuestionPoints(questionContext?.difficulty)
+      ));
+    } finally {
+      setIsSyncingPractice(false);
+    }
+  }, [activeTab, solvedPracticeIds]);
+
+  const practicePatterns = useMemo(() => {
+    return patternPracticeCatalog.map((catalogPattern) => {
+      const backendPattern = dsa_patterns.find((pattern) => pattern.name === catalogPattern.name) || {};
+      const solved = catalogPattern.questions.filter((question) => solvedPracticeIds.includes(question.id)).length;
+      const total = catalogPattern.questions.length;
+
+      return {
+        ...backendPattern,
+        ...catalogPattern,
+        solved,
+        total,
+        mastery: total > 0 ? Math.round((solved / total) * 100) : 0,
+        codeReviews: getPatternReviewCount(backendPattern),
+      };
+    });
+  }, [dsa_patterns, solvedPracticeIds]);
+
+  const totalPracticeQuestions = practicePatterns.reduce((sum, pattern) => sum + pattern.total, 0);
+  const totalSolvedPracticeQuestions = practicePatterns.reduce((sum, pattern) => sum + pattern.solved, 0);
   
   useEffect(() => {
     if (activeTab !== 'leaderboard') return;
@@ -350,10 +937,6 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                           <p className="text-2xl font-bold text-blue-400">{review.qualityScore}/100</p>
                         </div>
                       )}
-                      <RatingDeltaBadge
-                        scoreChange={review.finalScoreChange}
-                        scoreAfter={review.finalScoreAfter}
-                      />
                     </div>
 
                     {/* Premium Insights Row */}
@@ -442,7 +1025,7 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
   // Leaderboard Tab - Cool & Modern Design
   if (activeTab === 'leaderboard') {
     // ⚡ Use real leaderboard data only; keep empty state for truly empty responses
-    const leaderboardData = fullLeaderboard.length > 0 ? fullLeaderboard : safeLeaderboard;
+    const leaderboardData = fullLeaderboard.length > 0 ? fullLeaderboard : leaderboardPreview;
     const topThree = leaderboardData.slice(0, 3);
     const rest = leaderboardData.slice(3);
     
@@ -726,6 +1309,94 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
       </div>
     );
   }
+
+  if (activeTab === 'patterns') {
+    const overallPracticeProgress = totalPracticeQuestions > 0
+      ? Math.round((totalSolvedPracticeQuestions / totalPracticeQuestions) * 100)
+      : 0;
+
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          <div>
+            <h2 className="text-4xl font-bold text-white mb-2">pattern practice</h2>
+            <p className="text-gray-500">solve curated LeetCode and Codeforces questions by DSA pattern</p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-2xl px-5 py-4 min-w-[220px]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-gray-500">overall progress</span>
+              <span className="text-2xl font-bold text-white">{overallPracticeProgress}%</span>
+            </div>
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${overallPracticeProgress}%` }}
+                transition={{ duration: 0.5 }}
+                className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {totalSolvedPracticeQuestions}/{totalPracticeQuestions} questions solved
+            </p>
+            <p className="text-xs text-cyan-300 mt-1">
+              {practicePoints} practice points{isSyncingPractice ? ' · syncing' : ''}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {practicePatterns.map((pattern, index) => (
+            <motion.div
+              key={pattern.name}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
+              className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/10 rounded-3xl p-6"
+            >
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${pattern.color} flex items-center justify-center text-white font-bold shadow-lg`}>
+                    {pattern.label}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-xl font-bold text-white truncate">{pattern.name}</h3>
+                    <p className="text-sm text-gray-500">
+                      {pattern.solved}/{pattern.total} solved
+                      {pattern.codeReviews > 0 ? ` · ${pattern.codeReviews} code ${pattern.codeReviews === 1 ? 'review' : 'reviews'}` : ''}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-white">{pattern.mastery}%</p>
+                  <p className="text-xs text-gray-500">mastery</p>
+                </div>
+              </div>
+
+              <div className="h-3 bg-white/5 rounded-full overflow-hidden mb-5">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pattern.mastery}%` }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className={`h-full bg-gradient-to-r ${pattern.color} rounded-full`}
+                />
+              </div>
+
+              <div className="space-y-3">
+                {pattern.questions.map((question) => (
+                  <PracticeQuestionRow
+                    key={question.id}
+                    question={question}
+                    isSolved={solvedPracticeIds.includes(question.id)}
+                    onToggle={togglePracticeQuestion}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    );
+  }
   
   // Other tabs (patterns, etc.)
   if (activeTab !== 'overview') {
@@ -778,6 +1449,11 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
           </div>
         </div>
       </motion.div>
+
+      <ActivityHeatmap
+        reviews={safeAllReviews}
+        solvedQuestions={solvedPracticeQuestions}
+      />
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
@@ -846,11 +1522,6 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                             <p className="text-2xl font-bold text-emerald-400">{review.improvement || '0%'}</p>
                           </div>
                         </div>
-                        <RatingDeltaBadge
-                          scoreChange={review.finalScoreChange}
-                          scoreAfter={review.finalScoreAfter}
-                          compact
-                        />
                       </div>
                     </div>
 
@@ -904,23 +1575,25 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {dsa_patterns.map((pattern, index) => (
+              {practicePatterns.map((pattern, index) => (
                 <motion.div
                   key={pattern.name}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.15, delay: index * 0.03 }}
                   whileHover={{ y: -2 }}
-                  className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-8 hover:border-white/20 transition-all duration-150 group cursor-pointer"
+                  className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-8 hover:border-white/20 transition-all duration-150 group"
                 >
                   {/* Header */}
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
-                      <div className="text-4xl">{pattern.emoji}</div>
+                      <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${pattern.color} flex items-center justify-center text-white font-bold shadow-lg`}>
+                        {pattern.label}
+                      </div>
                       <div>
                         <h3 className="text-xl font-bold text-white mb-1">{pattern.name}</h3>
                         <p className="text-sm text-gray-500">
-                          {getPatternReviewCount(pattern)} code {getPatternReviewCount(pattern) === 1 ? 'review' : 'reviews'}
+                          {pattern.solved}/{pattern.total} questions solved
                         </p>
                       </div>
                     </div>
@@ -938,6 +1611,28 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                       <div className="absolute inset-0 bg-white/20 animate-pulse" />
                     </motion.div>
                   </div>
+
+                  <div className="mt-5 space-y-3">
+                    {pattern.questions.slice(0, 3).map((question) => (
+                      <PracticeQuestionRow
+                        key={question.id}
+                        question={question}
+                        isSolved={solvedPracticeIds.includes(question.id)}
+                        onToggle={togglePracticeQuestion}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('patterns')}
+                    className="w-full mt-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-2xl text-white text-sm font-medium transition-all duration-150 group/button cursor-pointer"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      view all questions
+                      <ArrowRight className="w-4 h-4 group-hover/button:translate-x-1 transition-transform" />
+                    </span>
+                  </button>
                 </motion.div>
               ))}
             </div>
@@ -958,7 +1653,7 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
             </div>
 
             <div className="bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/10 rounded-3xl p-8 space-y-4">
-              {(safeLeaderboard.length > 0 ? safeLeaderboard : defaultLeaderboard).map((user, index) => (
+              {(leaderboardPreview.length > 0 ? leaderboardPreview : defaultLeaderboard).map((user, index) => (
                 <LeaderboardItem key={user.rank} user={user} index={index} isCompact />
               ))}
 

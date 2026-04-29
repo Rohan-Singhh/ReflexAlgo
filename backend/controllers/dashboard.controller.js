@@ -1,16 +1,16 @@
 const { UserProgress, CodeReview, Leaderboard, Notification, DSAPattern } = require('../models');
 const { errorHandler } = require('../utils');
-const {
-  BASELINE_RATING,
-  computeContributionScore,
-  computeFinalScore
-} = require('../services/leaderboard.service');
 
 // ⚡ OPTIMIZED: Advanced in-memory response cache with LRU eviction
 const responseCache = new Map();
 const CACHE_TTL = 30000; // 30 seconds
 const MAX_CACHE_SIZE = 500; // Increased from 100
 const CACHE_STATS = { hits: 0, misses: 0, evictions: 0 };
+const PRACTICE_POINTS_BY_DIFFICULTY = {
+  Easy: 10,
+  Medium: 20,
+  Hard: 35
+};
 
 // ⚡ Cache helper with LRU (Least Recently Used) eviction
 const getCachedOrFetch = async (key, fetchFn, customTTL = CACHE_TTL) => {
@@ -178,17 +178,11 @@ exports.getRecentReviews = errorHandler(async (req, res) => {
       status: review.status === 'completed' ? 'optimized' : review.status,
       improvement: review.analysis?.improvementPercentage ? `${Math.round(review.analysis.improvementPercentage)}%` : '0%',
       date: getRelativeTime(review.createdAt),
+      createdAt: review.createdAt,
       lines: review.lineCount,
       // Premium analysis fields
       qualityScore: review.analysis?.codeQualityScore || review.analysis?.qualityBreakdown?.codeQuality?.score || null,
       readabilityScore: review.analysis?.readabilityScore || review.analysis?.qualityBreakdown?.readability?.score || null,
-      ratingChange: review.analysis?.meta?.ratingChange ?? null,
-      ratingAfter: review.analysis?.meta?.ratingAfter ?? null,
-      ratingBefore: review.analysis?.meta?.ratingBefore ?? null,
-      finalScoreChange: review.analysis?.meta?.finalScoreChange ?? null,
-      finalScoreAfter: review.analysis?.meta?.finalScoreAfter ?? null,
-      finalScoreBefore: review.analysis?.meta?.finalScoreBefore ?? null,
-      matchReason: review.analysis?.meta?.matchReason || null,
       suggestionsCount: review.analysis?.optimizationSuggestions?.length || 0,
       securityIssuesCount: review.analysis?.securityConcerns?.length || 0,
       patternsDetected: review.analysis?.detectedPatterns?.length || 0,
@@ -249,6 +243,100 @@ exports.getPatternProgress = errorHandler(async (req, res) => {
   });
 });
 
+// Get solved DSA practice questions for the current user
+exports.getPracticeProgress = errorHandler(async (req, res) => {
+  const progress = await getOrCreateUserProgress(req.user._id);
+  const solvedQuestions = progress.practice?.solvedQuestions || [];
+
+  res.status(200).json({
+    success: true,
+    data: {
+      solvedQuestions,
+      solvedIds: solvedQuestions.map((question) => question.questionId),
+      totalSolved: solvedQuestions.length,
+      totalPoints: progress.practice?.totalPoints || 0
+    }
+  });
+});
+
+// Toggle a DSA practice question as solved/unsolved and refresh leaderboard points
+exports.updatePracticeProgress = errorHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { questionId } = req.params;
+  const { solved = true, question = {} } = req.body || {};
+  const safeQuestion = question && typeof question === 'object' ? question : {};
+
+  if (!questionId || questionId.length > 120) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid question id'
+    });
+  }
+
+  const progress = await getOrCreateUserProgress(userId);
+  if (!progress.practice) {
+    progress.practice = { solvedQuestions: [], totalPoints: 0 };
+  }
+  if (!Array.isArray(progress.practice.solvedQuestions)) {
+    progress.practice.solvedQuestions = [];
+  }
+
+  const existingIndex = progress.practice.solvedQuestions.findIndex(
+    (item) => item.questionId === questionId
+  );
+  const wasSolved = existingIndex >= 0;
+  let pointsDelta = 0;
+
+  if (solved && !wasSolved) {
+    const difficulty = ['Easy', 'Medium', 'Hard'].includes(safeQuestion.difficulty)
+      ? safeQuestion.difficulty
+      : 'Medium';
+    const points = PRACTICE_POINTS_BY_DIFFICULTY[difficulty];
+
+    progress.practice.solvedQuestions.push({
+      questionId,
+      title: String(safeQuestion.title || '').slice(0, 180),
+      platform: String(safeQuestion.platform || '').slice(0, 40),
+      patternName: String(safeQuestion.patternName || '').slice(0, 80),
+      difficulty,
+      points,
+      solvedAt: new Date()
+    });
+    progress.practice.totalPoints = (progress.practice.totalPoints || 0) + points;
+    progress.practice.lastSolvedAt = new Date();
+    progress.addExperience(Math.max(5, Math.round(points / 2)));
+    progress.updateStreak();
+    pointsDelta = points;
+  } else if (!solved && wasSolved) {
+    const [removed] = progress.practice.solvedQuestions.splice(existingIndex, 1);
+    const removedPoints = removed?.points || 0;
+    progress.practice.totalPoints = Math.max(0, (progress.practice.totalPoints || 0) - removedPoints);
+    pointsDelta = -removedPoints;
+  }
+
+  await progress.save();
+
+  const leaderboardUpdate = await refreshPracticeLeaderboard(userId, progress);
+  invalidateCache(`stats:${userId}`);
+  invalidateCache(`patterns:${userId}`);
+  invalidateCache(`leaderboard:`);
+
+  const solvedQuestions = progress.practice?.solvedQuestions || [];
+  res.status(200).json({
+    success: true,
+    data: {
+      solvedQuestions,
+      solvedIds: solvedQuestions.map((item) => item.questionId),
+      totalSolved: solvedQuestions.length,
+      totalPoints: progress.practice?.totalPoints || 0,
+      pointsDelta,
+      scoreChange: leaderboardUpdate.scoreChange,
+      finalScore: leaderboardUpdate.finalScore,
+      rank: leaderboardUpdate.rank
+    }
+  });
+});
+
 // Get leaderboard (⚡⚡⚡ ULTRA-OPTIMIZED with pagination, caching, and minimal payload)
 exports.getLeaderboard = errorHandler(async (req, res) => {
   const userId = req.user._id;
@@ -262,6 +350,8 @@ exports.getLeaderboard = errorHandler(async (req, res) => {
     console.log(`📊 Leaderboard request - Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
     
     // ⚡ OPTIMIZATION 1: Fetch total count, leaderboard, and current user in parallel
+    await recalculatePracticeLeaderboard(period);
+
     const [totalCount, leaderboardData, currentUserEntry] = await Promise.all([
       // Always count for proper pagination
       Leaderboard.countDocuments({ period }),
@@ -292,7 +382,7 @@ exports.getLeaderboard = errorHandler(async (req, res) => {
     if (needsBackfill.length > 0) {
       const userIdsNeedingBackfill = needsBackfill.map((entry) => entry.user._id);
       const progressRows = await UserProgress.find({ user: { $in: userIdsNeedingBackfill } })
-        .select('user stats level')
+        .select('user stats level practice')
         .lean();
 
       const progressMap = new Map(
@@ -305,19 +395,10 @@ exports.getLeaderboard = errorHandler(async (req, res) => {
         const progress = progressMap.get(userIdStr);
         if (!progress) continue;
 
-        const contributionScore = computeContributionScore({
-          totalReviews: progress.stats?.totalReviews || 0,
-          averageImprovement: progress.stats?.averageImprovement || 0,
-          level: progress.level || 1,
-          streak: progress.stats?.currentStreak || 0,
-          codeQualityAverage: progress.stats?.codeQualityAverage || 0
-        });
+        const finalScore = progress.practice?.totalPoints || 0;
 
-        const rating = Number(entry.rating || BASELINE_RATING);
-        const finalScore = computeFinalScore(rating, contributionScore);
-
-        entry.rating = rating;
-        entry.contributionScore = contributionScore;
+        entry.rating = 0;
+        entry.contributionScore = finalScore;
         entry.finalScore = finalScore;
         entry.score = finalScore;
 
@@ -326,8 +407,8 @@ exports.getLeaderboard = errorHandler(async (req, res) => {
             filter: { _id: entry._id },
             update: {
               $set: {
-                rating,
-                contributionScore,
+                rating: 0,
+                contributionScore: finalScore,
                 finalScore,
                 score: finalScore,
                 lastUpdated: new Date()
@@ -439,6 +520,117 @@ exports.markNotificationRead = errorHandler(async (req, res) => {
     data: notification
   });
 });
+
+async function getOrCreateUserProgress(userId) {
+  let progress = await UserProgress.findOne({ user: userId });
+
+  if (!progress) {
+    progress = await UserProgress.create({
+      user: userId,
+      level: 1,
+      experience: 0,
+      experienceToNextLevel: 100,
+      practice: {
+        solvedQuestions: [],
+        totalPoints: 0
+      }
+    });
+  }
+
+  if (!progress.practice) {
+    progress.practice = { solvedQuestions: [], totalPoints: 0 };
+  }
+
+  return progress;
+}
+
+async function refreshPracticeLeaderboard(userId, progress) {
+  let leaderboardEntry = await Leaderboard.findOne({ user: userId, period: 'all-time' });
+
+  if (!leaderboardEntry) {
+    leaderboardEntry = await Leaderboard.create({
+      user: userId,
+      rating: 0,
+      contributionScore: 0,
+      finalScore: 0,
+      gamesPlayed: 0,
+      score: 0,
+      rank: 0,
+      period: 'all-time'
+    });
+  }
+
+  const previousFinalScore = Number(leaderboardEntry.finalScore ?? leaderboardEntry.score ?? 0);
+  const finalScore = progress.practice?.totalPoints || 0;
+  const oldRank = Number(leaderboardEntry.rank || 0);
+  const currentRank = (await Leaderboard.countDocuments({
+    period: 'all-time',
+    finalScore: { $gt: finalScore }
+  })) + 1;
+
+  leaderboardEntry.rating = 0;
+  leaderboardEntry.contributionScore = finalScore;
+  leaderboardEntry.finalScore = finalScore;
+  leaderboardEntry.score = finalScore;
+  leaderboardEntry.stats = {
+    ...(leaderboardEntry.stats || {}),
+    totalReviews: progress.stats?.totalReviews || 0,
+    averageImprovement: progress.stats?.averageImprovement || 0,
+    level: progress.level || 1,
+    streak: progress.stats?.currentStreak || 0,
+    practiceProblemsSolved: progress.practice?.solvedQuestions?.length || 0,
+    practicePoints: progress.practice?.totalPoints || 0
+  };
+  leaderboardEntry.previousRank = oldRank;
+  leaderboardEntry.rank = currentRank;
+  leaderboardEntry.rankChange = oldRank ? (oldRank - currentRank) : 0;
+  leaderboardEntry.lastUpdated = new Date();
+  await leaderboardEntry.save();
+
+  return {
+    finalScore,
+    scoreChange: finalScore - previousFinalScore,
+    rank: currentRank
+  };
+}
+
+async function recalculatePracticeLeaderboard(period = 'all-time') {
+  const entries = await Leaderboard.find({ period }).select('_id user').lean();
+  if (entries.length === 0) return;
+
+  const progressRows = await UserProgress.find({
+    user: { $in: entries.map((entry) => entry.user) }
+  }).select('user practice').lean();
+  const progressByUser = new Map(
+    progressRows.map((progress) => [progress.user.toString(), progress])
+  );
+
+  const bulkOps = entries.map((entry) => {
+    const progress = progressByUser.get(entry.user.toString());
+    const finalScore = progress?.practice?.totalPoints || 0;
+
+    return {
+      updateOne: {
+        filter: { _id: entry._id },
+        update: {
+          $set: {
+            rating: 0,
+            contributionScore: finalScore,
+            finalScore,
+            score: finalScore,
+            'stats.practiceProblemsSolved': progress?.practice?.solvedQuestions?.length || 0,
+            'stats.practicePoints': finalScore,
+            lastUpdated: new Date()
+          }
+        }
+      }
+    };
+  });
+
+  if (bulkOps.length > 0) {
+    await Leaderboard.bulkWrite(bulkOps, { ordered: false });
+  }
+}
 
 // Helper functions
 function getRelativeTime(date) {
