@@ -417,8 +417,8 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
   
   // Leaderboard Tab - Cool & Modern Design
   if (activeTab === 'leaderboard') {
-    // ⚡ Use full leaderboard data (all users) when in leaderboard tab
-    const leaderboardData = fullLeaderboard.length > 0 ? fullLeaderboard : (safeLeaderboard.length > 0 ? safeLeaderboard : defaultLeaderboard);
+    // ⚡ Use real leaderboard data only; keep empty state for truly empty responses
+    const leaderboardData = fullLeaderboard.length > 0 ? fullLeaderboard : safeLeaderboard;
     const topThree = leaderboardData.slice(0, 3);
     const rest = leaderboardData.slice(3);
     
@@ -619,8 +619,17 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
           </div>
         )}
 
+        {/* Small Leaderboard List (when fewer than 3 users exist) */}
+        {leaderboardData.length > 0 && leaderboardData.length < 3 && (
+          <div className="max-w-4xl mx-auto space-y-3">
+            {leaderboardData.map((user, index) => (
+              <LeaderboardItem key={user.rank} user={user} index={index} />
+            ))}
+          </div>
+        )}
+
             {/* Empty State */}
-            {leaderboardData.length <= 1 && (
+            {leaderboardData.length === 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
