@@ -17,7 +17,7 @@ const warmUserCache = async (userId) => {
         .select('stats level experience experienceToNextLevel')
         .lean(),
       Leaderboard.findOne({ user: userId, period: 'all-time' })
-        .select('rank rankChange')
+        .select('finalScore rankChange')
         .lean()
     ]);
   } catch (error) {
@@ -34,8 +34,8 @@ const warmGlobalCache = async () => {
     // Preload top leaderboard entries
     await Leaderboard.find({ period: 'all-time' })
       .populate('user', 'name')
-      .select('rank score rankChange user')
-      .sort({ rank: 1 })
+      .select('finalScore score rankChange user')
+      .sort({ finalScore: -1, _id: 1 })
       .limit(10)
       .lean();
   } catch (error) {

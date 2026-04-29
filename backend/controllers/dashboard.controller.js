@@ -1,5 +1,10 @@
 const { UserProgress, CodeReview, Leaderboard, Notification, DSAPattern } = require('../models');
 const { errorHandler } = require('../utils');
+const {
+  BASELINE_RATING,
+  computeContributionScore,
+  computeFinalScore
+} = require('../services/leaderboard.service');
 
 // ⚡ OPTIMIZED: Advanced in-memory response cache with LRU eviction
 const responseCache = new Map();
@@ -95,7 +100,7 @@ exports.getDashboardStats = errorHandler(async (req, res) => {
         .select('stats level experience experienceToNextLevel')
         .lean(),
       Leaderboard.findOne({ user: userId, period: 'all-time' })
-        .select('rank rankChange')
+        .select('finalScore rankChange')
         .lean()
     ]);
 
@@ -122,6 +127,14 @@ exports.getDashboardStats = errorHandler(async (req, res) => {
       };
     }
 
+    let computedRank = 0;
+    if (leaderboard?.finalScore !== undefined) {
+      computedRank = (await Leaderboard.countDocuments({
+        period: 'all-time',
+        finalScore: { $gt: leaderboard.finalScore }
+      })) + 1;
+    }
+
     return {
       totalReviews: progress.stats?.totalReviews || 0,
       optimizedReviews: progress.stats?.optimizedReviews || 0,
@@ -130,7 +143,7 @@ exports.getDashboardStats = errorHandler(async (req, res) => {
       level: progress.level || 1,
       experience: progress.experience || 0,
       experienceToNextLevel: progress.experienceToNextLevel || 100,
-      rank: leaderboard?.rank || 0,
+      rank: computedRank || 0,
       rankChange: leaderboard?.rankChange || 0
     };
   });
@@ -246,19 +259,79 @@ exports.getLeaderboard = errorHandler(async (req, res) => {
       // ⚡ OPTIMIZATION 2: Minimal field selection + lean for speed
       Leaderboard.find({ period })
         .populate('user', 'name profilePhoto') // Only get name and profilePhoto, not entire user object
-        .select('rank score rankChange user') // Only fields we need
-        .sort({ rank: 1 })
+        .select('finalScore score rankChange user') // Only fields we need
+        .sort({ finalScore: -1, _id: 1 })
         .skip(skip)
         .limit(limit)
         .lean() // Convert to plain JS objects (faster)
         .maxTimeMS(3000), // Shorter timeout for faster fails
       // Get current user's position
       Leaderboard.findOne({ user: userId, period })
-        .select('rank score rankChange')
+        .select('finalScore score rankChange')
         .lean()
     ]);
     
     console.log(`✅ Fetched ${leaderboardData.length} users (Total: ${totalCount}, HasMore: ${skip + leaderboardData.length < totalCount})`);
+
+    // Lazy backfill for legacy rows that don't yet have hybrid scores
+    const needsBackfill = leaderboardData.filter((entry) => {
+      const fs = Number(entry.finalScore ?? 0);
+      const legacy = Number(entry.score ?? 0);
+      return fs <= 0 && legacy <= 0 && entry.user?._id;
+    });
+
+    if (needsBackfill.length > 0) {
+      const userIdsNeedingBackfill = needsBackfill.map((entry) => entry.user._id);
+      const progressRows = await UserProgress.find({ user: { $in: userIdsNeedingBackfill } })
+        .select('user stats level')
+        .lean();
+
+      const progressMap = new Map(
+        progressRows.map((row) => [row.user.toString(), row])
+      );
+
+      const bulkOps = [];
+      for (const entry of needsBackfill) {
+        const userIdStr = entry.user._id.toString();
+        const progress = progressMap.get(userIdStr);
+        if (!progress) continue;
+
+        const contributionScore = computeContributionScore({
+          totalReviews: progress.stats?.totalReviews || 0,
+          averageImprovement: progress.stats?.averageImprovement || 0,
+          level: progress.level || 1,
+          streak: progress.stats?.currentStreak || 0,
+          codeQualityAverage: progress.stats?.codeQualityAverage || 0
+        });
+
+        const rating = Number(entry.rating || BASELINE_RATING);
+        const finalScore = computeFinalScore(rating, contributionScore);
+
+        entry.rating = rating;
+        entry.contributionScore = contributionScore;
+        entry.finalScore = finalScore;
+        entry.score = finalScore;
+
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: entry._id },
+            update: {
+              $set: {
+                rating,
+                contributionScore,
+                finalScore,
+                score: finalScore,
+                lastUpdated: new Date()
+              }
+            }
+          }
+        });
+      }
+
+      if (bulkOps.length > 0) {
+        await Leaderboard.bulkWrite(bulkOps, { ordered: false });
+      }
+    }
 
     // ⚡ OPTIMIZATION 3: Faster array mapping with pre-sized array
     const formatted = new Array(leaderboardData.length);
@@ -266,9 +339,9 @@ exports.getLeaderboard = errorHandler(async (req, res) => {
       const entry = leaderboardData[i];
       const isCurrentUser = entry.user?._id?.toString() === userId.toString();
       formatted[i] = {
-        rank: entry.rank || (skip + i + 1),
+        rank: skip + i + 1,
         name: entry.user?.name || 'Anonymous',
-        score: entry.score || 0,
+        score: entry.finalScore ?? entry.score ?? 0,
         avatar: getAvatar(entry.user?.name, i),
         profilePhoto: entry.user?.profilePhoto || null, // Add this line
         change: entry.rankChange > 0 ? `+${entry.rankChange}` : entry.rankChange < 0 ? `${entry.rankChange}` : '',
@@ -278,10 +351,15 @@ exports.getLeaderboard = errorHandler(async (req, res) => {
 
     // If current user is not in visible range, add them at the end
     if (currentUserEntry && !formatted.some(e => e.highlight) && limit <= 50) {
+      const currentUserRank = (await Leaderboard.countDocuments({
+        period,
+        finalScore: { $gt: (currentUserEntry.finalScore ?? currentUserEntry.score ?? 0) }
+      })) + 1;
+
       formatted.push({
-        rank: currentUserEntry.rank,
+        rank: currentUserRank,
         name: 'you',
-        score: currentUserEntry.score,
+        score: currentUserEntry.finalScore ?? currentUserEntry.score ?? 0,
         avatar: '⭐',
         profilePhoto: req.user?.profilePhoto || null, // Add this line
         change: currentUserEntry.rankChange > 0 ? `+${currentUserEntry.rankChange}` : currentUserEntry.rankChange < 0 ? `${currentUserEntry.rankChange}` : '',

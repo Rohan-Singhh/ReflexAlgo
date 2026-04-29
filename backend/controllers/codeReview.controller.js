@@ -2,6 +2,14 @@ const { CodeReview, UserProgress, Leaderboard, Activity, Notification } = requir
 const { errorHandler } = require('../utils');
 const aiService = require('../services/ai.service');
 const subscriptionService = require('../services/subscription.service');
+const {
+  BASELINE_RATING,
+  computeContributionScore,
+  updateRating,
+  computeFinalScore,
+  computeNormalizedCodeHash,
+  determineMatchOutcome
+} = require('../services/leaderboard.service');
 
 /**
  * Deep parse JSON - recursively parse stringified JSON
@@ -450,7 +458,7 @@ async function processReview(reviewId, subscription) {
     console.error(`   User ID:`, updatedReview.user);
   }
 
-  // Update leaderboard (wrap in try-catch to prevent silent failures)
+  // Update leaderboard (hybrid ELO + contribution model)
   try {
     console.log(`🏆 Updating leaderboard...`);
     
@@ -465,6 +473,10 @@ async function processReview(reviewId, subscription) {
     if (!leaderboardEntry) {
       leaderboardEntry = await Leaderboard.create({
         user: updatedReview.user,
+        rating: BASELINE_RATING,
+        contributionScore: 0,
+        finalScore: 0,
+        gamesPlayed: 0,
         score: 0,
         rank: 0,
         period: 'all-time'
@@ -472,30 +484,81 @@ async function processReview(reviewId, subscription) {
       console.log(`🏆 Created new leaderboard entry`);
     }
 
-    // Calculate new score
-    leaderboardEntry.score = Leaderboard.calculateScore({
+    // Find previous completed submission for match comparison
+    const previousCompletedReview = await CodeReview.findOne({
+      user: updatedReview.user,
+      status: 'completed',
+      _id: { $ne: updatedReview._id }
+    })
+      .select('analysis code createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // 1) Determine match outcome (win/loss/ignored)
+    const improvementPercent = Number(updatedReview.analysis?.improvementPercentage || 0);
+    const qualityScore = Number(updatedReview.analysis?.codeQualityScore || 0);
+    const matchOutcome = determineMatchOutcome({
+      improvement: improvementPercent,
+      quality: qualityScore,
+      previousReview: previousCompletedReview,
+      currentCode: updatedReview.code || '',
+      previousCode: previousCompletedReview?.code || ''
+    });
+
+    // 2) ELO update
+    const currentRating = Number(leaderboardEntry.rating || BASELINE_RATING);
+    const opponentRating = Number(previousCompletedReview?.analysis?.meta?.ratingSnapshot || BASELINE_RATING);
+    let updatedRating = currentRating;
+
+    if (matchOutcome.actualScore !== null) {
+      updatedRating = updateRating(
+        currentRating,
+        opponentRating,
+        matchOutcome.actualScore,
+        leaderboardEntry.gamesPlayed || 0
+      );
+      leaderboardEntry.gamesPlayed = (leaderboardEntry.gamesPlayed || 0) + 1;
+    }
+
+    // 3) Contribution score update
+    const contributionScore = computeContributionScore({
       totalReviews: progressForLeaderboard.stats.totalReviews,
       averageImprovement: progressForLeaderboard.stats.averageImprovement,
       level: progressForLeaderboard.level,
       streak: progressForLeaderboard.stats.currentStreak,
       codeQualityAverage: progressForLeaderboard.stats.codeQualityAverage
     });
-    await leaderboardEntry.save();
-    console.log(`🏆 Leaderboard score updated: ${leaderboardEntry.score}`);
 
-    // Recalculate ranks (simplified - in production, use a cron job)
-    const allEntries = await Leaderboard.find({ period: 'all-time' }).sort({ score: -1 });
-    for (let i = 0; i < allEntries.length; i++) {
-      const entry = allEntries[i];
-      const newRank = i + 1;
-      const rankChange = entry.previousRank ? entry.previousRank - newRank : 0;
-      
-      entry.previousRank = entry.rank;
-      entry.rank = newRank;
-      entry.rankChange = rankChange;
-      await entry.save();
-    }
-    console.log(`🏆 ✅ Leaderboard updated successfully`);
+    // 4) Final score update
+    const finalScore = computeFinalScore(updatedRating, contributionScore);
+
+    leaderboardEntry.rating = updatedRating;
+    leaderboardEntry.contributionScore = contributionScore;
+    leaderboardEntry.finalScore = finalScore;
+    leaderboardEntry.score = finalScore; // Backward-compatible field for existing UI
+    leaderboardEntry.stats = {
+      ...(leaderboardEntry.stats || {}),
+      totalReviews: progressForLeaderboard.stats.totalReviews,
+      averageImprovement: progressForLeaderboard.stats.averageImprovement,
+      level: progressForLeaderboard.level,
+      streak: progressForLeaderboard.stats.currentStreak,
+      lastSubmissionHash: computeNormalizedCodeHash(updatedReview.code || '')
+    };
+    leaderboardEntry.lastUpdated = new Date();
+
+    // 5) Efficient rank calculation using indexed count query
+    const oldRank = Number(leaderboardEntry.rank || 0);
+    const currentRank = (await Leaderboard.countDocuments({
+      period: 'all-time',
+      finalScore: { $gt: finalScore }
+    })) + 1;
+
+    leaderboardEntry.previousRank = oldRank;
+    leaderboardEntry.rank = currentRank;
+    leaderboardEntry.rankChange = oldRank ? (oldRank - currentRank) : 0;
+
+    await leaderboardEntry.save();
+    console.log(`🏆 Score=${finalScore}, Rating=${updatedRating}, Rank=${currentRank}, Match=${matchOutcome.reason}`);
   } catch (leaderboardError) {
     console.error(`❌ Error updating leaderboard:`, leaderboardError.message);
   }

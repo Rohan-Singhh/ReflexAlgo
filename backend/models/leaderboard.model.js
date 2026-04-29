@@ -12,6 +12,24 @@ const leaderboardSchema = new mongoose.Schema({
     default: 0,
     index: -1 // Descending order for ranking
   },
+  rating: {
+    type: Number,
+    default: 1200,
+    index: true
+  },
+  contributionScore: {
+    type: Number,
+    default: 0
+  },
+  finalScore: {
+    type: Number,
+    default: 0,
+    index: -1
+  },
+  gamesPlayed: {
+    type: Number,
+    default: 0
+  },
   rank: {
     type: Number,
     default: 0
@@ -40,6 +58,10 @@ const leaderboardSchema = new mongoose.Schema({
     streak: {
       type: Number,
       default: 0
+    },
+    lastSubmissionHash: {
+      type: String,
+      default: ''
     }
   },
   lastUpdated: {
@@ -59,8 +81,10 @@ const leaderboardSchema = new mongoose.Schema({
 // Compound indexes for leaderboard queries
 leaderboardSchema.index({ period: 1, score: -1 });
 leaderboardSchema.index({ period: 1, rank: 1 });
+leaderboardSchema.index({ period: 1, finalScore: -1, _id: 1 });
 
-// Static method to calculate score
+// Legacy static method to keep older call sites safe.
+// New flow should use leaderboard.service.js pure functions.
 leaderboardSchema.statics.calculateScore = function(userData) {
   const {  
 
