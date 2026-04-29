@@ -224,6 +224,7 @@ exports.getPatternProgress = errorHandler(async (req, res) => {
       return defaultPatterns.map(pattern => ({
         name: pattern.name,
         mastery: 0,
+        reviews: 0,
         solved: 0,
         total: pattern.totalProblems || 10,
         emoji: pattern.emoji || '🧠',
@@ -234,6 +235,7 @@ exports.getPatternProgress = errorHandler(async (req, res) => {
     return progress.patterns.slice(0, 4).map(p => ({
       name: p.pattern?.name || 'Unknown',
       mastery: Math.round(p.mastery || 0),
+      reviews: p.problemsSolved || 0,
       solved: p.problemsSolved || 0,
       total: p.pattern?.totalProblems || 10,
       emoji: p.pattern?.emoji || '🧠',

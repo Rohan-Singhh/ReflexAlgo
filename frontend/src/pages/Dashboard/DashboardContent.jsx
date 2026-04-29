@@ -6,15 +6,17 @@ import Button from '../../components/ui/Button';
 import dashboardService from '../../services/dashboardService';
 
 const dsa_patterns_default = [
-  { name: 'Sliding Window', mastery: 0, solved: 0, total: 10, emoji: '🪟', color: 'from-blue-500 to-cyan-500' },
-  { name: 'Two Pointers', mastery: 0, solved: 0, total: 10, emoji: '👉', color: 'from-purple-500 to-pink-500' },
-  { name: 'Binary Search', mastery: 0, solved: 0, total: 10, emoji: '🔍', color: 'from-emerald-500 to-green-500' },
-  { name: 'Dynamic Programming', mastery: 0, solved: 0, total: 10, emoji: '🧮', color: 'from-orange-500 to-red-500' },
+  { name: 'Sliding Window', mastery: 0, reviews: 0, solved: 0, total: 10, emoji: '🪟', color: 'from-blue-500 to-cyan-500' },
+  { name: 'Two Pointers', mastery: 0, reviews: 0, solved: 0, total: 10, emoji: '👉', color: 'from-purple-500 to-pink-500' },
+  { name: 'Binary Search', mastery: 0, reviews: 0, solved: 0, total: 10, emoji: '🔍', color: 'from-emerald-500 to-green-500' },
+  { name: 'Dynamic Programming', mastery: 0, reviews: 0, solved: 0, total: 10, emoji: '🧮', color: 'from-orange-500 to-red-500' },
 ];
 
 const defaultLeaderboard = [
   { rank: 1, name: 'Loading...', score: 0, avatar: '⏳', change: '' },
 ];
+
+const getPatternReviewCount = (pattern) => pattern.reviews ?? pattern.solved ?? 0;
 
 // ⚡ Memoized Leaderboard Item for better performance
 const LeaderboardItem = memo(({ user, index, isCompact = false }) => {
@@ -898,7 +900,7 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
           >
             <div className="mb-8">
               <h2 className="text-4xl font-bold text-white mb-2">pattern mastery</h2>
-              <p className="text-gray-500">track your progress across DSA patterns</p>
+              <p className="text-gray-500">track real-code familiarity across DSA patterns</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -917,7 +919,9 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                       <div className="text-4xl">{pattern.emoji}</div>
                       <div>
                         <h3 className="text-xl font-bold text-white mb-1">{pattern.name}</h3>
-                        <p className="text-sm text-gray-500">{pattern.solved}/{pattern.total} solved</p>
+                        <p className="text-sm text-gray-500">
+                          {getPatternReviewCount(pattern)} code {getPatternReviewCount(pattern) === 1 ? 'review' : 'reviews'}
+                        </p>
                       </div>
                     </div>
                     <div className="text-3xl font-bold text-white">{pattern.mastery}%</div>

@@ -1,4 +1,4 @@
-const { CodeReview, UserProgress, Leaderboard, Activity, Notification } = require('../models');
+const { CodeReview, UserProgress, Leaderboard, Activity, Notification, DSAPattern } = require('../models');
 const { errorHandler } = require('../utils');
 const aiService = require('../services/ai.service');
 const subscriptionService = require('../services/subscription.service');
@@ -107,6 +107,88 @@ function ensureArray(value) {
   }
   
   return [];
+}
+
+const PATTERN_CONFIDENCE_XP = Object.freeze({
+  high: 15,
+  medium: 10,
+  low: 5
+});
+
+function normalizePatternName(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function getConfidenceKey(confidence) {
+  const normalized = normalizePatternName(confidence);
+  if (normalized.includes('high')) return 'high';
+  if (normalized.includes('medium')) return 'medium';
+  if (normalized.includes('low')) return 'low';
+  return 'low';
+}
+
+function getPatternMasteryGain(detectedPattern, improvementPercent) {
+  const confidenceKey = getConfidenceKey(detectedPattern?.confidence);
+  const baseXp = PATTERN_CONFIDENCE_XP[confidenceKey] || PATTERN_CONFIDENCE_XP.low;
+  const improvementBonus = Number.parseFloat(improvementPercent || 0) >= 50 ? 5 : 0;
+  return baseXp + improvementBonus;
+}
+
+async function updatePatternMastery(progress, detectedPatterns, improvementPercent) {
+  if (!Array.isArray(detectedPatterns) || detectedPatterns.length === 0) {
+    return 0;
+  }
+
+  const activePatterns = await DSAPattern.find({ isActive: true })
+    .select('name')
+    .lean();
+
+  const patternByName = new Map(
+    activePatterns.map(pattern => [normalizePatternName(pattern.name), pattern])
+  );
+
+  const updatesByPatternId = new Map();
+  for (const detectedPattern of detectedPatterns) {
+    const matchedPattern = patternByName.get(normalizePatternName(detectedPattern?.pattern));
+    if (!matchedPattern) continue;
+
+    const patternId = matchedPattern._id.toString();
+    const masteryGain = getPatternMasteryGain(detectedPattern, improvementPercent);
+    const existingUpdate = updatesByPatternId.get(patternId);
+
+    if (!existingUpdate || masteryGain > existingUpdate.masteryGain) {
+      updatesByPatternId.set(patternId, { pattern: matchedPattern, masteryGain });
+    }
+  }
+
+  if (updatesByPatternId.size === 0) {
+    return 0;
+  }
+
+  const practicedAt = new Date();
+  for (const { pattern, masteryGain } of updatesByPatternId.values()) {
+    const patternId = pattern._id.toString();
+    const existingProgress = progress.patterns.find(item => item.pattern?.toString() === patternId);
+
+    if (existingProgress) {
+      existingProgress.problemsSolved = (existingProgress.problemsSolved || 0) + 1;
+      existingProgress.mastery = Math.min(100, (existingProgress.mastery || 0) + masteryGain);
+      existingProgress.lastPracticed = practicedAt;
+    } else {
+      progress.patterns.push({
+        pattern: pattern._id,
+        mastery: Math.min(100, masteryGain),
+        problemsSolved: 1,
+        lastPracticed: practicedAt
+      });
+    }
+  }
+
+  progress.markModified('patterns');
+  return updatesByPatternId.size;
 }
 
 // Submit code for review
@@ -370,16 +452,6 @@ async function processReview(reviewId, subscription) {
     return;
   }
 
-  // ⚡ ADDED: Invalidate dashboard cache for this user (ensure fresh data)
-  try {
-    const dashboardController = require('./dashboard.controller');
-    if (dashboardController && dashboardController.invalidateUserCache) {
-      dashboardController.invalidateUserCache(updatedReview.user.toString());
-    }
-  } catch (cacheError) {
-    // Silently fail - cache invalidation is not critical
-  }
-
   // ✅ Update user progress - ONLY called on successful reviews!
   if (!updatedReview) {
     console.error('❌ No updatedReview available - cannot update progress');
@@ -449,9 +521,27 @@ async function processReview(reviewId, subscription) {
     // Update streak
     progress.updateStreak();
 
+    const patternsUpdated = await updatePatternMastery(
+      progress,
+      updatedReview.analysis?.detectedPatterns,
+      improvementPercent
+    );
+
     await progress.save();
     console.log(`📊 ✅ User progress saved successfully!`);
     console.log(`📊 Final stats: ${progress.stats.totalReviews} reviews, ${progress.stats.currentStreak} day streak, ${Math.round(progress.stats.averageImprovement)}% avg improvement`);
+    if (patternsUpdated > 0) {
+      console.log(`Updated real-code mastery for ${patternsUpdated} pattern(s)`);
+    }
+
+    try {
+      const dashboardController = require('./dashboard.controller');
+      if (dashboardController && dashboardController.invalidateUserCache) {
+        dashboardController.invalidateUserCache(updatedReview.user.toString());
+      }
+    } catch (cacheError) {
+      // Cache invalidation is best-effort; review processing should still succeed.
+    }
   } catch (progressError) {
     console.error(`❌ Error updating user progress:`, progressError);
     console.error(`   Progress error details:`, progressError.message);
