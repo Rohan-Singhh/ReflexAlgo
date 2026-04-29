@@ -133,6 +133,17 @@ const codeReviewSchema = new mongoose.Schema({
       maintenanceReduction: String,
       userExperienceImprovement: String
     },
+    meta: {
+      ratingBefore: Number,
+      ratingAfter: Number,
+      ratingChange: Number,
+      ratingSnapshot: Number,
+      finalScoreBefore: Number,
+      finalScoreAfter: Number,
+      finalScoreChange: Number,
+      matchOutcome: Number,
+      matchReason: String
+    },
     note: String
   },
   optimizedCode: {
