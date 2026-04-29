@@ -7,6 +7,7 @@ const HowItWorks = lazy(() => import(/* webpackPrefetch: true */ './components/H
 const Features = lazy(() => import(/* webpackPrefetch: true */ './components/Features'));
 const TargetAudience = lazy(() => import(/* webpackPrefetch: true */ './components/TargetAudience'));
 const Pricing = lazy(() => import(/* webpackPrefetch: true */ './components/Pricing'));
+const Docs = lazy(() => import(/* webpackPrefetch: true */ './components/Docs'));
 const CTA = lazy(() => import(/* webpackPrefetch: true */ './components/CTA'));
 const Footer = lazy(() => import(/* webpackPrefetch: true */ './components/Footer'));
 
@@ -33,10 +34,11 @@ const LandingPage = () => (
     <main>
       <Hero />
       <Suspense fallback={null}>
-        <HowItWorks />
         <Features />
-        <TargetAudience />
+        <HowItWorks />
         <Pricing />
+        <Docs />
+        <TargetAudience />
         <CTA />
       </Suspense>
     </main>

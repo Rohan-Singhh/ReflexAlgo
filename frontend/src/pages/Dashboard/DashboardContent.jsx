@@ -79,6 +79,37 @@ const LeaderboardItem = memo(({ user, index, isCompact = false }) => {
 
 LeaderboardItem.displayName = 'LeaderboardItem';
 
+const RatingDeltaBadge = memo(({ scoreChange, scoreAfter, compact = false }) => {
+  if (scoreChange === null || scoreChange === undefined) return null;
+
+  const roundedChange = Math.round(Number(scoreChange) || 0);
+  const isPositive = roundedChange > 0;
+  const isNegative = roundedChange < 0;
+  const label = `${isPositive ? '+' : ''}${roundedChange}`;
+  const Icon = isPositive ? TrendingUp : Activity;
+
+  const toneClass = isPositive
+    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+    : isNegative
+    ? 'bg-red-500/10 border-red-500/20 text-red-400'
+    : 'bg-white/5 border-white/10 text-gray-400';
+
+  return (
+    <div className={`inline-flex items-center gap-2 border ${toneClass} ${compact ? 'px-3 py-1.5 rounded-xl' : 'px-4 py-2 rounded-2xl'}`}>
+      <Icon className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+      <div>
+        <p className="text-[10px] uppercase tracking-wider opacity-70 leading-none mb-1">points</p>
+        <p className={`${compact ? 'text-sm' : 'text-lg'} font-bold leading-none`}>
+          {label}
+          {scoreAfter ? <span className="ml-1 text-xs font-medium opacity-70">({Math.round(scoreAfter)})</span> : null}
+        </p>
+      </div>
+    </div>
+  );
+});
+
+RatingDeltaBadge.displayName = 'RatingDeltaBadge';
+
 const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOpenUpload, allReviews, setActiveTab }) => {
   const navigate = useNavigate();
   // Only show real reviews from database, no dummy data
@@ -294,7 +325,7 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                     </div>
 
                     {/* Premium Details Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mt-4">
                       {/* Date & Lines */}
                       <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                         <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
@@ -330,6 +361,10 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                           <p className="text-2xl font-bold text-blue-400">{review.qualityScore}/100</p>
                         </div>
                       )}
+                      <RatingDeltaBadge
+                        scoreChange={review.finalScoreChange}
+                        scoreAfter={review.finalScoreAfter}
+                      />
                     </div>
 
                     {/* Premium Insights Row */}
@@ -813,7 +848,7 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-6">
+                      <div className="flex flex-wrap items-center gap-6">
                         <div>
                           <p className="text-xs text-gray-600 mb-1">before</p>
                           <span className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm font-mono">
@@ -833,6 +868,11 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                             <p className="text-2xl font-bold text-emerald-400">{review.improvement || '0%'}</p>
                           </div>
                         </div>
+                        <RatingDeltaBadge
+                          scoreChange={review.finalScoreChange}
+                          scoreAfter={review.finalScoreAfter}
+                          compact
+                        />
                       </div>
                     </div>
 

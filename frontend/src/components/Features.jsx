@@ -36,12 +36,13 @@ const features = [
 
 const Features = () => {
   return (
-    <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <section className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-full bg-gradient-to-b from-purple-900/10 to-transparent rounded-full blur-3xl"></div>
 
       <div className="max-w-7xl mx-auto relative">
         <motion.div
+          id="features"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

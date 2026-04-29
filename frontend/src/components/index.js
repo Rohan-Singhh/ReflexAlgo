@@ -4,6 +4,7 @@ export { default as HowItWorks } from './HowItWorks';
 export { default as Features } from './Features';
 export { default as TargetAudience } from './TargetAudience';
 export { default as Pricing } from './Pricing';
+export { default as Docs } from './Docs';
 export { default as CTA } from './CTA';
 export { default as Footer } from './Footer';
 

@@ -507,6 +507,7 @@ async function processReview(reviewId, subscription) {
 
     // 2) ELO update
     const currentRating = Number(leaderboardEntry.rating || BASELINE_RATING);
+    const previousFinalScore = Number(leaderboardEntry.finalScore ?? leaderboardEntry.score ?? 0);
     const opponentRating = Number(previousCompletedReview?.analysis?.meta?.ratingSnapshot || BASELINE_RATING);
     let updatedRating = currentRating;
 
@@ -558,7 +559,31 @@ async function processReview(reviewId, subscription) {
     leaderboardEntry.rankChange = oldRank ? (oldRank - currentRank) : 0;
 
     await leaderboardEntry.save();
+    await CodeReview.updateOne(
+      { _id: updatedReview._id },
+      {
+        $set: {
+          'analysis.meta.ratingBefore': currentRating,
+          'analysis.meta.ratingAfter': updatedRating,
+          'analysis.meta.ratingChange': updatedRating - currentRating,
+          'analysis.meta.ratingSnapshot': updatedRating,
+          'analysis.meta.finalScoreBefore': previousFinalScore,
+          'analysis.meta.finalScoreAfter': finalScore,
+          'analysis.meta.finalScoreChange': finalScore - previousFinalScore,
+          'analysis.meta.matchOutcome': matchOutcome.actualScore,
+          'analysis.meta.matchReason': matchOutcome.reason
+        }
+      }
+    );
     console.log(`🏆 Score=${finalScore}, Rating=${updatedRating}, Rank=${currentRank}, Match=${matchOutcome.reason}`);
+    try {
+      const dashboardController = require('./dashboard.controller');
+      if (dashboardController && dashboardController.invalidateUserCache) {
+        dashboardController.invalidateUserCache(updatedReview.user.toString());
+      }
+    } catch (cacheError) {
+      // Cache invalidation is best-effort; review processing should still succeed.
+    }
   } catch (leaderboardError) {
     console.error(`❌ Error updating leaderboard:`, leaderboardError.message);
   }

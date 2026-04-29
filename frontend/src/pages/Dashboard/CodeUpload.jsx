@@ -10,6 +10,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_CODE_LENGTH = 50000; // 50k characters
 const POLL_INTERVAL = 2500; // 2.5 seconds - optimized to reduce server load
 const STEP_INTERVAL = 2800; // 2.8 seconds per step = ~14 seconds total for 5 steps
+const FINISH_STEP_INTERVAL = 650; // Fast completion pass when AI finishes early
 const HIGH_TRAFFIC_THRESHOLD = 15000; // Show message after 15 seconds
 
 const LANGUAGES = [
@@ -81,6 +82,12 @@ const CodeUpload = ({ onSubmit, onClose, onOpenPricing, subscription }) => {
   const pollCountRef = useRef(0);
   const highTrafficTimerRef = useRef(null);
   const analysisStartTimeRef = useRef(0);
+  const finishTimeoutsRef = useRef([]);
+  const currentAnalyzingStepRef = useRef(0);
+
+  useEffect(() => {
+    currentAnalyzingStepRef.current = currentAnalyzingStep;
+  }, [currentAnalyzingStep]);
 
   // Cleanup polling interval only (used during analysis)
   const cleanupPolling = useCallback(() => {
@@ -105,9 +112,58 @@ const CodeUpload = ({ onSubmit, onClose, onOpenPricing, subscription }) => {
       clearTimeout(highTrafficTimerRef.current);
       highTrafficTimerRef.current = null;
     }
+    finishTimeoutsRef.current.forEach(clearTimeout);
+    finishTimeoutsRef.current = [];
     pollCountRef.current = 0;
     setShowHighTrafficMsg(false);
   }, []);
+
+  const completeAnalysisFlow = useCallback((completedReview) => {
+    cleanupPolling();
+
+    if (stepIntervalRef.current) {
+      clearInterval(stepIntervalRef.current);
+      stepIntervalRef.current = null;
+    }
+
+    if (highTrafficTimerRef.current) {
+      clearTimeout(highTrafficTimerRef.current);
+      highTrafficTimerRef.current = null;
+    }
+
+    finishTimeoutsRef.current.forEach(clearTimeout);
+    finishTimeoutsRef.current = [];
+
+    const startFrom = currentAnalyzingStepRef.current;
+    const remainingSteps = [];
+    for (let index = startFrom + 1; index < AnalyzingSteps.length; index += 1) {
+      remainingSteps.push(index);
+    }
+
+    if (remainingSteps.length === 0) {
+      const doneTimer = setTimeout(() => {
+        setReviewResult(completedReview);
+        setIsAnalyzing(false);
+        setStep(5);
+      }, FINISH_STEP_INTERVAL);
+      finishTimeoutsRef.current.push(doneTimer);
+      return;
+    }
+
+    remainingSteps.forEach((stepIndex, order) => {
+      const timer = setTimeout(() => {
+        setCurrentAnalyzingStep(stepIndex);
+      }, FINISH_STEP_INTERVAL * (order + 1));
+      finishTimeoutsRef.current.push(timer);
+    });
+
+    const resultTimer = setTimeout(() => {
+      setReviewResult(completedReview);
+      setIsAnalyzing(false);
+      setStep(5);
+    }, FINISH_STEP_INTERVAL * (remainingSteps.length + 1));
+    finishTimeoutsRef.current.push(resultTimer);
+  }, [cleanupPolling]);
 
   // Animate through analyzing steps - smooth progression (NO LOOP)
   useEffect(() => {
@@ -183,10 +239,7 @@ const CodeUpload = ({ onSubmit, onClose, onOpenPricing, subscription }) => {
         pollCountRef.current++;
         
         if (status === 'completed') {
-          setReviewResult(result.data);
-          setIsAnalyzing(false);
-          setStep(5);
-          cleanupPolling();
+          completeAnalysisFlow(result.data);
           return true;
         } else if (status === 'failed') {
           setError('Analysis failed. Please try again.');
@@ -209,7 +262,7 @@ const CodeUpload = ({ onSubmit, onClose, onOpenPricing, subscription }) => {
     pollIntervalRef.current = setInterval(pollOnce, POLL_INTERVAL);
 
     return cleanupPolling;
-  }, [reviewId, isAnalyzing, cleanupPolling]);
+  }, [reviewId, isAnalyzing, cleanupPolling, completeAnalysisFlow]);
 
   // Memoized handlers
   const handleLanguageSelect = useCallback((lang) => {
@@ -298,6 +351,8 @@ const CodeUpload = ({ onSubmit, onClose, onOpenPricing, subscription }) => {
     try {
       setStep(4);
       setIsAnalyzing(true);
+      finishTimeoutsRef.current.forEach(clearTimeout);
+      finishTimeoutsRef.current = [];
       setCurrentAnalyzingStep(0); // Reset animation to start
       pollCountRef.current = 0; // Reset poll counter
       
@@ -1079,4 +1134,3 @@ const CodeUpload = ({ onSubmit, onClose, onOpenPricing, subscription }) => {
 };
 
 export default CodeUpload;
-

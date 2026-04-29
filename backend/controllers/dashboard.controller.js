@@ -182,6 +182,13 @@ exports.getRecentReviews = errorHandler(async (req, res) => {
       // Premium analysis fields
       qualityScore: review.analysis?.codeQualityScore || review.analysis?.qualityBreakdown?.codeQuality?.score || null,
       readabilityScore: review.analysis?.readabilityScore || review.analysis?.qualityBreakdown?.readability?.score || null,
+      ratingChange: review.analysis?.meta?.ratingChange ?? null,
+      ratingAfter: review.analysis?.meta?.ratingAfter ?? null,
+      ratingBefore: review.analysis?.meta?.ratingBefore ?? null,
+      finalScoreChange: review.analysis?.meta?.finalScoreChange ?? null,
+      finalScoreAfter: review.analysis?.meta?.finalScoreAfter ?? null,
+      finalScoreBefore: review.analysis?.meta?.finalScoreBefore ?? null,
+      matchReason: review.analysis?.meta?.matchReason || null,
       suggestionsCount: review.analysis?.optimizationSuggestions?.length || 0,
       securityIssuesCount: review.analysis?.securityConcerns?.length || 0,
       patternsDetected: review.analysis?.detectedPatterns?.length || 0,

@@ -76,12 +76,13 @@ const plans = [
 
 const Pricing = () => {
   return (
-    <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <section className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 bg-gradient-to-b from-black via-purple-900/10 to-black"></div>
 
       <div className="max-w-7xl mx-auto relative">
         <motion.div
+          id="pricing"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -170,4 +171,3 @@ const Pricing = () => {
 };
 
 export default Pricing;
-

@@ -26,14 +26,7 @@ const Navbar = () => {
     e.preventDefault();
     const element = document.querySelector(href);
     if (element) {
-      const offset = 200; // navbar + large buffer to see complete section
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setIsOpen(false);
     }
   };
