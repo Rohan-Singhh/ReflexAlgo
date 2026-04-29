@@ -60,19 +60,6 @@ const LeaderboardItem = memo(({ user, index, isCompact = false }) => {
         </div>
         <p className="text-sm text-gray-500">{user.score.toLocaleString()} pts</p>
       </div>
-      {user.change && user.change !== '0' && (
-        <div className={`flex-shrink-0 px-3 py-1.5 rounded-full ${
-          user.change.startsWith('+') 
-            ? 'bg-emerald-500/10 border border-emerald-500/20' 
-            : 'bg-red-500/10 border border-red-500/20'
-        }`}>
-          <span className={`text-xs font-semibold ${
-            user.change.startsWith('+') ? 'text-emerald-400' : 'text-red-400'
-          }`}>
-            {user.change}
-          </span>
-        </div>
-      )}
     </motion.div>
   );
 });
@@ -638,17 +625,6 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
                   </div>
                 </div>
 
-                {/* Change Badge */}
-                {user.change && user.change !== '0' && (
-                  <div className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
-                    user.change.startsWith('+') 
-                      ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' 
-                      : 'bg-red-500/10 border border-red-500/20 text-red-400'
-                  }`}>
-                    {user.change.startsWith('+') ? <TrendingUp className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
-                    {user.change}
-                  </div>
-                )}
               </motion.div>
             ))}
           </div>
