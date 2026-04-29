@@ -24,6 +24,10 @@ router.get('/practice-progress', dashboardController.getPracticeProgress);
 // Toggle solved state for a DSA practice question
 router.patch('/practice-progress/:questionId', dashboardController.updatePracticeProgress);
 
+// Review-to-Roadmap AI Coach
+router.get('/roadmap-coach', dashboardController.getRoadmapCoach);
+router.post('/roadmap-coach/refresh', dashboardController.refreshRoadmapCoach);
+
 // Get leaderboard
 router.get('/leaderboard', dashboardController.getLeaderboard);
 

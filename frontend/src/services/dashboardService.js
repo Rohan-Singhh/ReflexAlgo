@@ -61,6 +61,26 @@ class DashboardService {
     }
   }
 
+  // Get Review-to-Roadmap AI Coach
+  async getRoadmapCoach() {
+    try {
+      const response = await api.get('/dashboard/roadmap-coach');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || 'Failed to fetch roadmap coach';
+    }
+  }
+
+  // Refresh Review-to-Roadmap AI Coach
+  async refreshRoadmapCoach() {
+    try {
+      const response = await api.post('/dashboard/roadmap-coach/refresh');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || 'Failed to refresh roadmap coach';
+    }
+  }
+
   // Get leaderboard
   async getLeaderboard(limit = 5, period = 'all-time', page = 1) {
     try {

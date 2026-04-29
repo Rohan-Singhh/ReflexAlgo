@@ -2,6 +2,7 @@ const { CodeReview, UserProgress, Activity, Notification, DSAPattern } = require
 const { errorHandler } = require('../utils');
 const aiService = require('../services/ai.service');
 const subscriptionService = require('../services/subscription.service');
+const roadmapCoachService = require('../services/roadmapCoach.service');
 
 /**
  * Deep parse JSON - recursively parse stringified JSON
@@ -519,6 +520,7 @@ async function processReview(reviewId, subscription) {
       improvementPercent
     );
 
+    roadmapCoachService.invalidateRoadmapCoach(progress);
     await progress.save();
     console.log(`📊 ✅ User progress saved successfully!`);
     console.log(`📊 Final stats: ${progress.stats.totalReviews} reviews, ${progress.stats.currentStreak} day streak, ${Math.round(progress.stats.averageImprovement)}% avg improvement`);

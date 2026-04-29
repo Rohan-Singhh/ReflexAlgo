@@ -1,4 +1,5 @@
 const { UserProgress, CodeReview, Leaderboard, Notification, DSAPattern } = require('../models');
+const { subscriptionService, roadmapCoachService } = require('../services');
 const { errorHandler } = require('../utils');
 
 // ⚡ OPTIMIZED: Advanced in-memory response cache with LRU eviction
@@ -11,6 +12,12 @@ const PRACTICE_POINTS_BY_DIFFICULTY = {
   Medium: 20,
   Hard: 35
 };
+const ROADMAP_FULL_ACCESS_PLANS = new Set(['pro', 'team', 'enterprise']);
+
+const hasRoadmapFullAccess = (subscription) => (
+  Boolean(subscription?.features?.hasAdvancedAI) ||
+  ROADMAP_FULL_ACCESS_PLANS.has(subscription?.plan)
+);
 
 // ⚡ Cache helper with LRU (Least Recently Used) eviction
 const getCachedOrFetch = async (key, fetchFn, customTTL = CACHE_TTL) => {
@@ -314,6 +321,7 @@ exports.updatePracticeProgress = errorHandler(async (req, res) => {
     pointsDelta = -removedPoints;
   }
 
+  roadmapCoachService.invalidateRoadmapCoach(progress);
   await progress.save();
 
   const leaderboardUpdate = await refreshPracticeLeaderboard(userId, progress);
@@ -338,6 +346,37 @@ exports.updatePracticeProgress = errorHandler(async (req, res) => {
 });
 
 // Get leaderboard (⚡⚡⚡ ULTRA-OPTIMIZED with pagination, caching, and minimal payload)
+// Get Review-to-Roadmap AI Coach recommendations
+exports.getRoadmapCoach = errorHandler(async (req, res) => {
+  const userId = req.user._id;
+  const subscription = await subscriptionService.getUserSubscription(userId);
+  const hasFullAccess = hasRoadmapFullAccess(subscription);
+  const roadmap = await roadmapCoachService.getRoadmapCoach(userId, {
+    includeAI: hasFullAccess
+  });
+
+  res.status(200).json({
+    success: true,
+    data: roadmapCoachService.formatRoadmapForAccess(roadmap, hasFullAccess)
+  });
+});
+
+// Force-refresh roadmap copy for paid users; starter users receive the locked preview
+exports.refreshRoadmapCoach = errorHandler(async (req, res) => {
+  const userId = req.user._id;
+  const subscription = await subscriptionService.getUserSubscription(userId);
+  const hasFullAccess = hasRoadmapFullAccess(subscription);
+  const roadmap = await roadmapCoachService.getRoadmapCoach(userId, {
+    includeAI: hasFullAccess,
+    forceRefresh: hasFullAccess
+  });
+
+  res.status(200).json({
+    success: true,
+    data: roadmapCoachService.formatRoadmapForAccess(roadmap, hasFullAccess)
+  });
+});
+
 exports.getLeaderboard = errorHandler(async (req, res) => {
   const userId = req.user._id;
   const limit = parseInt(req.query.limit) || 5;

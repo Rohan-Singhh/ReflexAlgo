@@ -468,6 +468,98 @@ const analyzeCode = async (code, language, title, options = {}) => {
   }
 };
 
+const buildRoadmapCoachFallback = (context = {}) => ({
+  headline: context.headline || `Focus on ${context.focusPattern || 'your next DSA pattern'} next`,
+  whyThisMatters: context.whyThisMatters || `${context.focusPattern || 'This pattern'} is the clearest next step from your current reviews and practice history.`,
+  weeklyGoal: context.weeklyGoal || `Finish the recommended problems this week.`,
+  recommendations: (context.recommendations || []).map((item) => ({
+    id: item.id,
+    reason: item.reason || `Use this to strengthen ${item.patternName || context.focusPattern || 'the target pattern'}.`
+  })),
+  usedAI: false
+});
+
+const getRoadmapCoachPrompt = (context = {}) => `You are a concise DSA interview coach for ReflexAlgo.
+The backend has already chosen the roadmap. Do not change the selected pattern or problem list.
+Write motivating, specific copy that explains why this roadmap is the right next move.
+
+Return only valid JSON in this exact shape:
+{
+  "headline": "short premium headline under 70 characters",
+  "whyThisMatters": "2 concise sentences explaining the personal signal",
+  "weeklyGoal": "one concrete weekly goal",
+  "recommendations": [
+    { "id": "problem id", "reason": "one short reason this problem fits" }
+  ]
+}
+
+Roadmap context:
+${JSON.stringify(context, null, 2)}`;
+
+const generateRoadmapCoach = async (context = {}, options = {}) => {
+  const fallback = buildRoadmapCoachFallback(context);
+
+  if (!OPENROUTER_API_KEY) {
+    return fallback;
+  }
+
+  try {
+    const model = options.model || DEFAULT_MODEL;
+    const response = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You write concise JSON-only coaching copy for a DSA learning roadmap. Never add markdown.'
+          },
+          { role: 'user', content: getRoadmapCoachPrompt(context) }
+        ],
+        temperature: 0.35,
+        max_tokens: 900,
+        top_p: 0.9
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://reflexalgo.com',
+          'X-Title': 'ReflexAlgo Roadmap Coach'
+        },
+        timeout: 12000
+      }
+    );
+
+    const aiResponse = response?.data?.choices?.[0]?.message?.content;
+    if (!aiResponse) return fallback;
+
+    const cleanedResponse = aiResponse
+      .replace(/```json\s*/gi, '')
+      .replace(/```\s*$/gm, '')
+      .replace(/^```\s*/gm, '')
+      .trim()
+      .replace(/,(\s*[}\]])/g, '$1');
+    const parsed = deepParseJSON(JSON.parse(cleanedResponse));
+
+    return {
+      headline: String(parsed.headline || fallback.headline).slice(0, 100),
+      whyThisMatters: String(parsed.whyThisMatters || fallback.whyThisMatters).slice(0, 500),
+      weeklyGoal: String(parsed.weeklyGoal || fallback.weeklyGoal).slice(0, 180),
+      recommendations: Array.isArray(parsed.recommendations)
+        ? parsed.recommendations.map((item) => ({
+            id: String(item.id || ''),
+            reason: String(item.reason || '').slice(0, 220)
+          })).filter((item) => item.id && item.reason)
+        : fallback.recommendations,
+      usedAI: true
+    };
+  } catch (error) {
+    console.error('Roadmap coach AI error:', error.message);
+    return fallback;
+  }
+};
+
 /**
  * Quick code complexity check (no AI, instant)
  * @param {string} code - Code to check
@@ -491,6 +583,7 @@ const quickComplexityCheck = (code) => {
 
 module.exports = {
   analyzeCode,
+  generateRoadmapCoach,
   quickComplexityCheck,
   FREE_CODE_MODELS
 };

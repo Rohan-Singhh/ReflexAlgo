@@ -338,6 +338,7 @@ const Dashboard = memo(() => {
             patterns={patterns}
             leaderboard={leaderboard}
             onOpenUpload={() => setIsUploadOpen(true)}
+            onOpenPricing={() => setIsPricingOpen(true)}
           />
         </Suspense>
       </main>

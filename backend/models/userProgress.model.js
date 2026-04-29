@@ -124,6 +124,30 @@ const userProgressSchema = new mongoose.Schema({
       type: Date
     }
   },
+  roadmapCoach: {
+    focusPattern: String,
+    headline: String,
+    whyThisMatters: String,
+    weeklyGoal: String,
+    recommendations: [{
+      id: String,
+      title: String,
+      platform: String,
+      difficulty: {
+        type: String,
+        enum: ['Easy', 'Medium', 'Hard']
+      },
+      url: String,
+      reason: String,
+      patternName: String
+    }],
+    sourceSignature: String,
+    generatedAt: Date,
+    usedAI: {
+      type: Boolean,
+      default: false
+    }
+  },
   achievements: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Achievement'
