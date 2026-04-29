@@ -24,8 +24,8 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
-    minify: 'esbuild', // Fastest minifier
-    cssMinify: 'esbuild',
+    minify: 'oxc',
+    cssMinify: 'lightningcss',
     reportCompressedSize: false, // ⚡ Faster builds
     
     rollupOptions: {
@@ -82,9 +82,4 @@ export default defineConfig({
     force: true
   },
   
-  // ⚡ Faster HMR
-  esbuild: {
-    logOverride: { 'this-is-undefined-in-esm': 'silent' },
-    drop: ['console', 'debugger'], // Remove console.logs in production
-  },
 })

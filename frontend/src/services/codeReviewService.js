@@ -3,12 +3,8 @@ import api from './api';
 class CodeReviewService {
   // Submit code for review
   async submitCode(reviewData) {
-    try {
-      const response = await api.post('/reviews/submit', reviewData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post('/reviews/submit', reviewData);
+    return response.data;
   }
 
   // Get review status (for polling)
