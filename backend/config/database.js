@@ -6,21 +6,17 @@ const connectDatabase = async () => {
     
     // 🔥 TOP 1% MongoDB optimizations
     await mongoose.connect(MONGO_URI, {
-      maxPoolSize: 100, // ⚡ EXTREME: Even more connections
-      minPoolSize: 20, // ⚡ EXTREME: More warm connections
-      socketTimeoutMS: 30000, // ⚡ Faster timeout
-      serverSelectionTimeoutMS: 3000, // ⚡ Faster server selection
+      maxPoolSize: 20,
+      minPoolSize: 5,
+      socketTimeoutMS: 45000, // ⚡ Faster timeout
+      serverSelectionTimeoutMS: 10000, // ⚡ Faster server selection
       family: 4,
-      maxIdleTimeMS: 5000, // ⚡ Close idle connections very fast
-      compressors: ['zlib'],
-      zlibCompressionLevel: 3, // ⚡ Faster compression (less CPU)
-      readPreference: 'primaryPreferred',
+      maxIdleTimeMS: 30000,
       retryWrites: true,
       retryReads: true,
-      directConnection: false,
+      autoIndex: process.env.NODE_ENV !== 'production',
       w: 'majority',
-      readConcern: { level: 'local' }, // ⚡ Faster reads
-      maxConnecting: 10 // ⚡ More parallel connections
+      readPreference: 'primary'
     });
     
     console.log('Database connected');
@@ -28,7 +24,7 @@ const connectDatabase = async () => {
     // Handle connection events
     mongoose.connection.on('error', (err) => {
       console.error('Database error:', err.message);
-    });
+    }); 
 
     mongoose.connection.on('disconnected', () => {
       console.warn('Database disconnected - attempting reconnect');
