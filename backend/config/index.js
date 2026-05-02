@@ -1,11 +1,11 @@
 // Centralized config exports
-const connectDatabase = require('./database');
-const configureMiddleware = require('./middleware.config');
-const configureRoutes = require('./routes.config');
-const { configureProcessHandlers } = require('./server.config');
-const warmupDatabase = require('./warmup');
+import connectDatabase from './database.js';
+import configureMiddleware from './middleware.config.js';
+import configureRoutes from './routes.config.js';
+import { configureProcessHandlers } from './server.config.js';
+import warmupDatabase from './warmup.js';
 
-module.exports = {
+export {
   connectDatabase,
   configureMiddleware,
   configureRoutes,
