@@ -396,6 +396,28 @@ async function processReview(reviewId, subscription) {
       await subscription.save();
       const limit = subscription.features?.codeReviewsLimit || 'unlimited';
       console.log(`✅ Usage incremented: ${subscription.usage.codeReviewsUsed}/${limit} (${subscription.plan} plan)`);
+
+      if (subscription.plan === 'starter' && Number.isFinite(limit)) {
+        const remaining = Math.max(0, limit - subscription.usage.codeReviewsUsed);
+        if (remaining <= 1) {
+          await Notification.create({
+            user: review.user,
+            type: 'usage_limit',
+            title: remaining === 0 ? 'Review limit reached' : 'One free review left',
+            message: remaining === 0
+              ? 'You have used all free AI code reviews for this month. Upgrade to continue reviewing code.'
+              : 'You have 1 free AI code review left this month.',
+            icon: 'meter',
+            link: '/dashboard',
+            priority: remaining === 0 ? 'high' : 'normal',
+            data: {
+              used: subscription.usage.codeReviewsUsed,
+              limit,
+              remaining
+            }
+          });
+        }
+      }
     }
   } catch (error) {
     console.error('❌ Error processing review:', error);
@@ -566,7 +588,7 @@ async function processReview(reviewId, subscription) {
       title: 'Code Review Complete! 🎉',
       message: `Your "${updatedReview.title}" review is ready with ${improvementPercent}% improvement`,
       icon: '⚡',
-      link: `/dashboard/review/${updatedReview._id}`,
+      link: `/review/${updatedReview._id}`,
       data: {
         reviewId: updatedReview._id,
         improvement: improvementPercent

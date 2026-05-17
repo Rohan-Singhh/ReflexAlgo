@@ -1,5 +1,6 @@
 const Subscription = require('../models/subscription.model');
 const User = require('../models/user.model');
+const Notification = require('../models/notification.model');
 
 // ⚡ OPTIMIZATION: Simple in-memory cache for subscriptions
 const subscriptionCache = new Map();
@@ -80,6 +81,21 @@ class SubscriptionService {
             })}`
           : '';
 
+        await Notification.create({
+          user: userId,
+          type: 'billing',
+          title: 'Paid plan still active',
+          message: `Your ${subscription.plan} plan is active${expiryText}. Free plan can be activated after it expires.`,
+          icon: 'shield',
+          link: '/dashboard',
+          priority: 'normal',
+          data: {
+            currentPlan: subscription.plan,
+            requestedPlan: newPlan,
+            expiresAt: expiry
+          }
+        });
+
         throw new Error(`You already have an active ${subscription.plan} plan${expiryText}. Free plan can be activated after the paid plan expires.`);
       }
 
@@ -123,6 +139,23 @@ class SubscriptionService {
       subscription.endDate = isPaidPlan ? subscription.paymentInfo.nextBillingDate : undefined;
       
       await subscription.save();
+
+      await Notification.create({
+        user: userId,
+        type: 'billing',
+        title: isPaidPlan ? `${newPlan} plan activated` : 'Free plan activated',
+        message: isPaidPlan
+          ? `Your ${newPlan} plan is active${subscription.paymentInfo.nextBillingDate ? ` until ${new Date(subscription.paymentInfo.nextBillingDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}` : ''}.`
+          : 'Your account is now on the free starter plan.',
+        icon: isPaidPlan ? 'crown' : 'check',
+        link: '/dashboard',
+        priority: isPaidPlan ? 'high' : 'normal',
+        data: {
+          plan: newPlan,
+          billingCycle: subscription.billingCycle,
+          nextBillingDate: subscription.paymentInfo.nextBillingDate
+        }
+      });
       
       // ⚡ Invalidate cache (both subscription and stats)
       subscriptionCache.delete(`sub:${userId}`);

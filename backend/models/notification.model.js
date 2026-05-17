@@ -8,7 +8,7 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['achievement', 'level_up', 'review_complete', 'streak_milestone', 'rank_change', 'team_invite', 'system', 'promotion'],
+    enum: ['achievement', 'level_up', 'review_complete', 'streak_milestone', 'rank_change', 'team_invite', 'system', 'promotion', 'billing', 'usage_limit'],
     required: true
   },
   title: {
