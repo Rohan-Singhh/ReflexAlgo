@@ -12,14 +12,23 @@ const handleValidationError = (err) => {
   const errValues = Object.values(err.errors);
   const length = errValues.length;
   const errors = new Array(length);
+  const fieldErrors = {};
   
   for (let i = 0; i < length; i++) {
-    errors[i] = errValues[i].message;
+    const validationError = errValues[i];
+    errors[i] = validationError.message;
+    if (validationError.path && !fieldErrors[validationError.path]) {
+      fieldErrors[validationError.path] = validationError.message;
+    }
   }
   
   return {
     statusCode: 400,
-    message: `Invalid input data. ${errors.join('. ')}`
+    message: errors.length === 1
+      ? errors[0]
+      : `Please fix these fields: ${errors.join('; ')}`,
+    errors,
+    fieldErrors
   };
 };
 
@@ -72,6 +81,8 @@ const errorHandler = (err, req, res, next) => {
     const handled = handler(err);
     finalStatusCode = handled.statusCode;
     finalMessage = handled.message;
+    if (handled.errors) err.validationMessages = handled.errors;
+    if (handled.fieldErrors) err.fieldErrors = handled.fieldErrors;
   } else if (err.code === 11000) {
     // Mongoose Duplicate Key Error
     const handled = handleDuplicateKeyError(err);
@@ -85,6 +96,14 @@ const errorHandler = (err, req, res, next) => {
     message: finalMessage,  // Frontend expects 'message' field
     error: finalMessage     // Keep for backwards compatibility
   };
+
+  if (err.validationMessages) {
+    response.errors = err.validationMessages;
+  }
+
+  if (err.fieldErrors) {
+    response.fieldErrors = err.fieldErrors;
+  }
 
   if (IS_DEV) {
     response.stack = err.stack;

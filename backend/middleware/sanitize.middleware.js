@@ -48,9 +48,6 @@ const validateLogin = [
     .notEmpty().withMessage(PASSWORD_REQUIRED)
 ];
 
-// ⚡ OPTIMIZED: Reuse error response structure
-const VALIDATION_FAILED = 'Validation failed';
-
 // Middleware to check validation results
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
@@ -59,19 +56,29 @@ const handleValidationErrors = (req, res, next) => {
     return next();
   }
   
-  // ⚡ OPTIMIZED: Direct iteration instead of array().map()
   const errorMessages = [];
+  const fieldErrors = {};
   const errorsArray = errors.array();
   const length = errorsArray.length;
   
   for (let i = 0; i < length; i++) {
-    errorMessages.push(errorsArray[i].msg);
+    const error = errorsArray[i];
+    errorMessages.push(error.msg);
+    if (!fieldErrors[error.path]) {
+      fieldErrors[error.path] = error.msg;
+    }
   }
+
+  const message = errorMessages.length === 1
+    ? errorMessages[0]
+    : `Please fix these fields: ${errorMessages.join('; ')}`;
   
   return res.status(400).json({
     success: false,
-    message: VALIDATION_FAILED,
-    errors: errorMessages
+    message,
+    error: message,
+    errors: errorMessages,
+    fieldErrors
   });
 };
 

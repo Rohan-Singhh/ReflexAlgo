@@ -99,7 +99,10 @@ const SignUp = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || 'Registration failed');
+        const error = new Error(result.message || 'Registration failed');
+        error.fieldErrors = result.fieldErrors || null;
+        error.errors = result.errors || [];
+        throw error;
       }
 
       // Backend returns: { success, message, data: { user, token } }
@@ -120,6 +123,11 @@ const SignUp = () => {
       // Check if error is "already registered"
       if (error.message.toLowerCase().includes('already registered')) {
         setShowLoginModal(true);
+      } else if (error.fieldErrors && Object.keys(error.fieldErrors).length > 0) {
+        setErrors({
+          ...error.fieldErrors,
+          submit: error.message
+        });
       } else {
         setErrors({ submit: error.message });
       }
