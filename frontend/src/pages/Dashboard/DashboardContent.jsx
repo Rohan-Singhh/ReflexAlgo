@@ -1,7 +1,7 @@
 import { memo, useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Upload, Clock, CheckCircle, Code2, ArrowRight, Sparkles, Trophy, TrendingUp, Zap, ArrowUp, ExternalLink, Lock, RefreshCw } from 'lucide-react';
+import { Upload, Clock, CheckCircle, Code2, ArrowRight, Sparkles, Trophy, TrendingUp, Zap, ArrowUp, ExternalLink, Lock, RefreshCw, GitBranch, Search, Layers, PlayCircle } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import dashboardService from '../../services/dashboardService';
 import patternPracticeCatalog from '../../../../shared/patternPracticeCatalog.json';
@@ -45,6 +45,73 @@ const ACTIVITY_MODE_META = {
   practice: { label: 'Practice solves', empty: 'No practice' },
 };
 const ACTIVITY_LEGEND = [0, 1, 2, 4, 6];
+
+const SKILL_TREE_PATH = [
+  {
+    id: 'arrays-foundation',
+    name: 'Arrays',
+    label: 'AR',
+    kind: 'foundation',
+    color: 'from-sky-500 to-teal-400',
+    icon: Code2,
+    description: 'Foundation for index movement, frequency maps, and clean iteration habits.',
+    unlockHint: 'Start here. Mark any practice problem solved to light up the path.',
+  },
+  {
+    id: 'two-pointers',
+    name: 'Two Pointers',
+    patternName: 'Two Pointers',
+    label: 'TP',
+    kind: 'pattern',
+    color: 'from-purple-500 to-pink-500',
+    icon: GitBranch,
+    description: 'Learn controlled movement from both ends or across sorted sequences.',
+    unlockHint: 'Unlocked after Arrays foundation.',
+  },
+  {
+    id: 'sliding-window',
+    name: 'Sliding Window',
+    patternName: 'Sliding Window',
+    label: 'SW',
+    kind: 'pattern',
+    color: 'from-blue-500 to-cyan-500',
+    icon: PlayCircle,
+    description: 'Turn repeated subarray/string checks into one smooth moving window.',
+    unlockHint: 'Solve 3 Two Pointers problems or reach 15% mastery.',
+  },
+  {
+    id: 'prefix-sum',
+    name: 'Prefix Sum',
+    label: 'PS',
+    kind: 'preview',
+    color: 'from-amber-400 to-orange-500',
+    icon: TrendingUp,
+    description: 'Coming path node for range queries, cumulative counts, and subarray sums.',
+    unlockHint: 'Preview unlocks after basic Sliding Window progress.',
+  },
+  {
+    id: 'binary-search',
+    name: 'Binary Search',
+    patternName: 'Binary Search',
+    label: 'BS',
+    kind: 'pattern',
+    color: 'from-emerald-500 to-lime-500',
+    icon: Search,
+    description: 'Practice narrowing answer space and sorted-state decisions.',
+    unlockHint: 'Unlocked from Two Pointers progress.',
+  },
+  {
+    id: 'dynamic-programming',
+    name: 'Dynamic Programming',
+    patternName: 'Dynamic Programming',
+    label: 'DP',
+    kind: 'pattern',
+    color: 'from-rose-500 to-red-500',
+    icon: Layers,
+    description: 'Boss-level pattern for state design, recurrence, and memoization.',
+    unlockHint: 'Unlocks after progress in Sliding Window and Binary Search.',
+  },
+];
 
 const getDateKey = (value) => {
   const date = value instanceof Date ? value : new Date(value);
@@ -540,6 +607,158 @@ const PracticeQuestionRow = memo(({ question, isSolved, onToggle }) => (
 
 PracticeQuestionRow.displayName = 'PracticeQuestionRow';
 
+const SkillTree = memo(({
+  nodes,
+  selectedNodeId,
+  onSelectNode,
+  selectedNode,
+  solvedPracticeIds,
+  onToggleQuestion,
+}) => (
+  <section className="rounded-3xl border border-white/10 bg-[#0D1117] overflow-hidden">
+    <div className="grid grid-cols-1 2xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="relative min-h-[520px] p-6 lg:p-8 border-b 2xl:border-b-0 2xl:border-r border-white/10">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:40px_40px]" />
+        <div className="relative">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div>
+              <p className="text-sm font-semibold text-cyan-300 mb-2">skill tree</p>
+              <h3 className="text-3xl lg:text-4xl font-bold text-white">DSA progression map</h3>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">completed</span>
+              <span className="px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300">available</span>
+              <span className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400">locked</span>
+            </div>
+          </div>
+
+          <div className="relative grid grid-cols-1 md:grid-cols-6 gap-5 md:gap-4">
+            <div className="hidden md:block absolute left-[8%] right-[8%] top-[74px] h-1 rounded-full bg-white/10" />
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: nodes.length > 1 ? Math.max(0.08, (nodes.filter((node) => node.isUnlocked).length - 1) / (nodes.length - 1)) : 0 }}
+              transition={{ duration: 0.6 }}
+              className="hidden md:block absolute left-[8%] right-[8%] top-[74px] h-1 rounded-full bg-gradient-to-r from-sky-400 via-cyan-400 to-emerald-400 origin-left"
+            />
+
+            {nodes.map((node, index) => {
+              const Icon = node.icon;
+              const isSelected = selectedNodeId === node.id;
+              const isLocked = !node.isUnlocked;
+
+              return (
+                <motion.button
+                  key={node.id}
+                  type="button"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: Math.min(index * 0.05, 0.25) }}
+                  onClick={() => onSelectNode(node.id)}
+                  className={`relative text-left rounded-3xl border p-4 transition-all duration-150 min-h-[190px] ${
+                    isSelected
+                      ? 'bg-white/[0.08] border-cyan-400/50 shadow-2xl shadow-cyan-500/10'
+                      : isLocked
+                      ? 'bg-black/30 border-white/10 opacity-70 hover:opacity-90'
+                      : 'bg-black/40 border-white/10 hover:border-white/25 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${node.color} flex items-center justify-center mb-4 shadow-lg ${isLocked ? 'grayscale opacity-60' : ''}`}>
+                    {isLocked ? <Lock className="w-6 h-6 text-white" /> : <Icon className="w-6 h-6 text-white" />}
+                  </div>
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div>
+                      <p className="text-lg font-bold text-white">{node.name}</p>
+                      <p className="text-xs text-gray-500">stage {index + 1}</p>
+                    </div>
+                    {node.isComplete ? (
+                      <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                    ) : null}
+                  </div>
+                  <div className="h-2 rounded-full bg-white/10 overflow-hidden mb-3">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${node.mastery}%` }}
+                      transition={{ duration: 0.5, delay: 0.1 }}
+                      className={`h-full rounded-full bg-gradient-to-r ${node.color}`}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={isLocked ? 'text-gray-500' : 'text-gray-300'}>{node.solved}/{node.total} solved</span>
+                    <span className={node.isComplete ? 'text-emerald-300' : isLocked ? 'text-gray-500' : 'text-cyan-300'}>{node.mastery}%</span>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 lg:p-8 bg-gradient-to-br from-[#101820] to-[#080A0D]">
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div className="min-w-0">
+            <p className="text-sm text-gray-500 mb-2">selected node</p>
+            <h3 className="text-3xl font-bold text-white truncate">{selectedNode.name}</h3>
+          </div>
+          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${selectedNode.color} flex items-center justify-center text-white font-bold`}>
+            {selectedNode.label}
+          </div>
+        </div>
+
+        <p className="text-gray-400 leading-relaxed mb-6">{selectedNode.description}</p>
+
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+            <p className="text-2xl font-bold text-white">{selectedNode.mastery}%</p>
+            <p className="text-xs text-gray-500">mastery</p>
+          </div>
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+            <p className="text-2xl font-bold text-white">{selectedNode.solved}</p>
+            <p className="text-xs text-gray-500">solved</p>
+          </div>
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+            <p className="text-2xl font-bold text-white">{selectedNode.codeReviews || 0}</p>
+            <p className="text-xs text-gray-500">reviews</p>
+          </div>
+        </div>
+
+        {!selectedNode.isUnlocked ? (
+          <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <Lock className="w-5 h-5 text-gray-400" />
+              <p className="font-semibold text-white">locked path</p>
+            </div>
+            <p className="text-sm text-gray-400">{selectedNode.unlockHint}</p>
+          </div>
+        ) : selectedNode.questions?.length > 0 ? (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-bold text-white">practice quests</h4>
+              <span className="text-xs text-gray-500">{selectedNode.questions.length} problems</span>
+            </div>
+            <div className="space-y-3 max-h-[520px] overflow-y-auto custom-scrollbar pr-1">
+              {selectedNode.questions.map((question) => (
+                <PracticeQuestionRow
+                  key={question.id}
+                  question={question}
+                  isSolved={solvedPracticeIds.includes(question.id)}
+                  onToggle={onToggleQuestion}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-6">
+            <p className="text-sm font-semibold text-cyan-300 mb-2">foundation node</p>
+            <p className="text-sm text-gray-300">{selectedNode.unlockHint}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+));
+
+SkillTree.displayName = 'SkillTree';
+
 // ⚡ Memoized Leaderboard Item for better performance
 const LeaderboardItem = memo(({ user, index, isCompact = false }) => {
   const rankBadgeClass = user.rank === 1 
@@ -609,6 +828,7 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
   const [solvedPracticeQuestions, setSolvedPracticeQuestions] = useState([]);
   const [practicePoints, setPracticePoints] = useState(0);
   const [isSyncingPractice, setIsSyncingPractice] = useState(false);
+  const [selectedSkillNodeId, setSelectedSkillNodeId] = useState('two-pointers');
   const [roadmapCoach, setRoadmapCoach] = useState(null);
   const [isLoadingRoadmap, setIsLoadingRoadmap] = useState(true);
   const [isRefreshingRoadmap, setIsRefreshingRoadmap] = useState(false);
@@ -813,6 +1033,55 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
 
   const totalPracticeQuestions = practicePatterns.reduce((sum, pattern) => sum + pattern.total, 0);
   const totalSolvedPracticeQuestions = practicePatterns.reduce((sum, pattern) => sum + pattern.solved, 0);
+  const skillTreeNodes = useMemo(() => {
+    const patternByName = new Map(practicePatterns.map((pattern) => [pattern.name, pattern]));
+    const totalSolved = practicePatterns.reduce((sum, pattern) => sum + pattern.solved, 0);
+    const totalQuestions = practicePatterns.reduce((sum, pattern) => sum + pattern.total, 0);
+    const twoPointers = patternByName.get('Two Pointers') || {};
+    const slidingWindow = patternByName.get('Sliding Window') || {};
+    const binarySearch = patternByName.get('Binary Search') || {};
+
+    const isUnlocked = {
+      'arrays-foundation': true,
+      'two-pointers': true,
+      'sliding-window': (twoPointers.solved || 0) >= 3 || (twoPointers.mastery || 0) >= 15,
+      'prefix-sum': (slidingWindow.solved || 0) >= 2 || (slidingWindow.mastery || 0) >= 10,
+      'binary-search': (twoPointers.solved || 0) >= 3 || (twoPointers.mastery || 0) >= 15,
+      'dynamic-programming': ((slidingWindow.solved || 0) >= 4 && (binarySearch.solved || 0) >= 3) || totalSolved >= 10,
+    };
+
+    return SKILL_TREE_PATH.map((stage) => {
+      const pattern = stage.patternName ? patternByName.get(stage.patternName) : null;
+
+      if (pattern) {
+        return {
+          ...stage,
+          ...pattern,
+          color: stage.color,
+          icon: stage.icon,
+          description: stage.description,
+          unlockHint: stage.unlockHint,
+          isUnlocked: isUnlocked[stage.id],
+          isComplete: pattern.mastery >= 70,
+        };
+      }
+
+      const foundationMastery = totalQuestions > 0 ? Math.round((totalSolved / totalQuestions) * 100) : 0;
+      const previewMastery = stage.id === 'prefix-sum' ? Math.min(100, Math.round(((slidingWindow.mastery || 0) + (binarySearch.mastery || 0)) / 2)) : foundationMastery;
+
+      return {
+        ...stage,
+        solved: stage.id === 'prefix-sum' ? 0 : totalSolved,
+        total: stage.id === 'prefix-sum' ? 8 : Math.max(totalQuestions, 1),
+        mastery: stage.id === 'prefix-sum' ? previewMastery : foundationMastery,
+        codeReviews: 0,
+        questions: [],
+        isUnlocked: isUnlocked[stage.id],
+        isComplete: stage.id !== 'prefix-sum' && foundationMastery >= 20,
+      };
+    });
+  }, [practicePatterns]);
+  const selectedSkillNode = skillTreeNodes.find((node) => node.id === selectedSkillNodeId) || skillTreeNodes[1] || skillTreeNodes[0];
   
   useEffect(() => {
     if (activeTab !== 'leaderboard') return;
@@ -1442,6 +1711,23 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
           </div>
         </div>
 
+        <SkillTree
+          nodes={skillTreeNodes}
+          selectedNodeId={selectedSkillNodeId}
+          onSelectNode={setSelectedSkillNodeId}
+          selectedNode={selectedSkillNode}
+          solvedPracticeIds={solvedPracticeIds}
+          onToggleQuestion={togglePracticeQuestion}
+        />
+
+        <div>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-2xl font-bold text-white">all pattern cards</h3>
+              <p className="text-sm text-gray-500">quick scan of every catalog pattern</p>
+            </div>
+          </div>
+
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {practicePatterns.map((pattern, index) => (
             <motion.div
@@ -1480,7 +1766,7 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
               </div>
 
               <div className="space-y-3">
-                {pattern.questions.map((question) => (
+                {pattern.questions.slice(0, 3).map((question) => (
                   <PracticeQuestionRow
                     key={question.id}
                     question={question}
@@ -1492,6 +1778,7 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
             </motion.div>
           ))}
         </div>
+      </div>
       </div>
     );
   }

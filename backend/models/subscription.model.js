@@ -1,5 +1,17 @@
 const mongoose = require('mongoose');
 
+const PAID_PLANS = ['pro', 'team', 'enterprise'];
+
+function addBillingPeriod(fromDate, billingCycle = 'monthly') {
+  const nextDate = new Date(fromDate);
+  if (billingCycle === 'yearly') {
+    nextDate.setFullYear(nextDate.getFullYear() + 1);
+  } else {
+    nextDate.setMonth(nextDate.getMonth() + 1);
+  }
+  return nextDate;
+}
+
 const subscriptionSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -85,7 +97,37 @@ subscriptionSchema.index({ plan: 1 });
 
 // Method to check if subscription is active
 subscriptionSchema.methods.isActive = function() {
-  return this.status === 'active' && (!this.endDate || this.endDate > Date.now());
+  const expiry = this.getExpiryDate();
+  return this.status === 'active' && (!expiry || expiry > Date.now());
+};
+
+// Method to check if plan is paid
+subscriptionSchema.methods.isPaidPlan = function() {
+  return PAID_PLANS.includes(this.plan);
+};
+
+// Method to resolve the active paid/free period expiry
+subscriptionSchema.methods.getExpiryDate = function() {
+  if (this.endDate) return new Date(this.endDate);
+  if (this.paymentInfo?.nextBillingDate) return new Date(this.paymentInfo.nextBillingDate);
+  if (this.isPaidPlan() && this.paymentInfo?.lastPaymentDate) {
+    return addBillingPeriod(this.paymentInfo.lastPaymentDate, this.billingCycle);
+  }
+  if (this.isPaidPlan() && this.startDate) {
+    return addBillingPeriod(this.startDate, this.billingCycle);
+  }
+  return null;
+};
+
+// Method to check if a paid plan should keep access
+subscriptionSchema.methods.hasActivePaidAccess = function() {
+  if (!this.isPaidPlan()) return false;
+  if (this.status !== 'active') return false;
+
+  const expiry = this.getExpiryDate();
+  if (!expiry) return true;
+
+  return expiry.getTime() > Date.now();
 };
 
 // Method to check if user can create code review
@@ -151,5 +193,10 @@ subscriptionSchema.statics.getPlanFeatures = function(planName) {
   return plans[planName] || plans.starter;
 };
 
-module.exports = mongoose.model('Subscription', subscriptionSchema);
+subscriptionSchema.statics.getPaidPlans = function() {
+  return [...PAID_PLANS];
+};
 
+subscriptionSchema.statics.addBillingPeriod = addBillingPeriod;
+
+module.exports = mongoose.model('Subscription', subscriptionSchema);

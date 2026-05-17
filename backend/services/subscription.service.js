@@ -70,9 +70,29 @@ class SubscriptionService {
         throw new Error('Subscription not found');
       }
 
+      if (newPlan === 'starter' && subscription.hasActivePaidAccess()) {
+        const expiry = subscription.getExpiryDate();
+        const expiryText = expiry
+          ? ` until ${new Date(expiry).toLocaleDateString('en-IN', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            })}`
+          : '';
+
+        throw new Error(`You already have an active ${subscription.plan} plan${expiryText}. Free plan can be activated after the paid plan expires.`);
+      }
+
       const planFeatures = Subscription.getPlanFeatures(newPlan);
+      const isPaidPlan = Subscription.getPaidPlans().includes(newPlan);
+      const now = new Date();
+
+      if (!subscription.paymentInfo) {
+        subscription.paymentInfo = {};
+      }
       
       subscription.plan = newPlan;
+      subscription.status = 'active';
       subscription.price = planFeatures.price || 0;
       subscription.features = {
         codeReviewsLimit: planFeatures.codeReviewsLimit,
@@ -91,9 +111,16 @@ class SubscriptionService {
       }
       if (paymentInfo.nextBillingDate) {
         subscription.paymentInfo.nextBillingDate = paymentInfo.nextBillingDate;
+      } else if (isPaidPlan && !subscription.paymentInfo.nextBillingDate) {
+        subscription.paymentInfo.nextBillingDate = Subscription.addBillingPeriod(now, subscription.billingCycle);
+      } else if (!isPaidPlan) {
+        subscription.paymentInfo.nextBillingDate = undefined;
       }
 
-      subscription.paymentInfo.lastPaymentDate = new Date();
+      subscription.paymentInfo.lastPaymentDate = isPaidPlan ? now : undefined;
+      subscription.startDate = now;
+      subscription.cancelledAt = undefined;
+      subscription.endDate = isPaidPlan ? subscription.paymentInfo.nextBillingDate : undefined;
       
       await subscription.save();
       
