@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Sparkles, Users, Building2, X, Crown } from 'lucide-react';
+import { AlertTriangle, Check, Sparkles, Users, Building2, X, Crown, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Button from '../../components/ui/Button';
 import subscriptionService from '../../services/subscriptionService';
@@ -78,6 +78,7 @@ const plans = [
 const PricingModal = ({ isOpen, onClose, onUpgradeSuccess, currentPlan }) => {
   const [upgrading, setUpgrading] = useState(false);
   const [upgradingPlan, setUpgradingPlan] = useState(null);
+  const [planError, setPlanError] = useState('');
 
   // ESC key to close
   useEffect(() => {
@@ -96,6 +97,7 @@ const PricingModal = ({ isOpen, onClose, onUpgradeSuccess, currentPlan }) => {
       return;
     }
 
+    setPlanError('');
     setUpgrading(true);
     setUpgradingPlan(planName);
 
@@ -121,7 +123,10 @@ const PricingModal = ({ isOpen, onClose, onUpgradeSuccess, currentPlan }) => {
       }
     } catch (error) {
       console.error('Upgrade failed:', error);
-      alert(`Failed to upgrade: ${error}`);
+      const message = String(error || 'Unable to change plan right now.')
+        .replace(/^Failed to change plan:\s*/i, '')
+        .replace(/^Failed to upgrade:\s*/i, '');
+      setPlanError(message);
       setUpgrading(false);
       setUpgradingPlan(null);
     }
@@ -175,6 +180,45 @@ const PricingModal = ({ isOpen, onClose, onUpgradeSuccess, currentPlan }) => {
 
                 {/* Pricing Cards */}
                 <div className="p-8">
+                  <AnimatePresence>
+                    {planError && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                        transition={{ duration: 0.18 }}
+                        className="mb-6 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-purple-500/10 p-5"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-start gap-4">
+                          <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+                            <AlertTriangle className="w-6 h-6 text-amber-300" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+                              <h3 className="text-lg font-bold text-white">Paid plan is still active</h3>
+                              <span className="inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                protected
+                              </span>
+                            </div>
+                            <p className="text-sm text-amber-100/90 leading-relaxed">{planError}</p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Your paid access stays safe until the billing period ends.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setPlanError('')}
+                            className="flex-shrink-0 p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-colors"
+                            aria-label="Dismiss plan message"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {plans.map((plan, index) => (
                       <motion.div
@@ -280,4 +324,3 @@ const PricingModal = ({ isOpen, onClose, onUpgradeSuccess, currentPlan }) => {
 };
 
 export default PricingModal;
-
