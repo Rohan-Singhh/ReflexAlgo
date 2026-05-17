@@ -55,7 +55,7 @@ const SKILL_TREE_PATH = [
     color: 'from-sky-500 to-teal-400',
     icon: Code2,
     description: 'Foundation for index movement, frequency maps, and clean iteration habits.',
-    unlockHint: 'Start here. Mark any practice problem solved to light up the path.',
+    guidance: 'Foundation signal from your total practice activity.',
   },
   {
     id: 'two-pointers',
@@ -66,7 +66,7 @@ const SKILL_TREE_PATH = [
     color: 'from-purple-500 to-pink-500',
     icon: GitBranch,
     description: 'Learn controlled movement from both ends or across sorted sequences.',
-    unlockHint: 'Unlocked after Arrays foundation.',
+    guidance: 'A good early pattern, but you can practice it anytime.',
   },
   {
     id: 'sliding-window',
@@ -77,7 +77,7 @@ const SKILL_TREE_PATH = [
     color: 'from-blue-500 to-cyan-500',
     icon: PlayCircle,
     description: 'Turn repeated subarray/string checks into one smooth moving window.',
-    unlockHint: 'Solve 3 Two Pointers problems or reach 15% mastery.',
+    guidance: 'Recommended after Two Pointers, but your progress counts either way.',
   },
   {
     id: 'prefix-sum',
@@ -87,7 +87,7 @@ const SKILL_TREE_PATH = [
     color: 'from-amber-400 to-orange-500',
     icon: TrendingUp,
     description: 'Coming path node for range queries, cumulative counts, and subarray sums.',
-    unlockHint: 'Preview unlocks after basic Sliding Window progress.',
+    guidance: 'Preview node. Add Prefix Sum problems later to make this a full practice track.',
   },
   {
     id: 'binary-search',
@@ -98,7 +98,7 @@ const SKILL_TREE_PATH = [
     color: 'from-emerald-500 to-lime-500',
     icon: Search,
     description: 'Practice narrowing answer space and sorted-state decisions.',
-    unlockHint: 'Unlocked from Two Pointers progress.',
+    guidance: 'Independent practice track. Great whenever sorted-answer thinking appears.',
   },
   {
     id: 'dynamic-programming',
@@ -109,7 +109,7 @@ const SKILL_TREE_PATH = [
     color: 'from-rose-500 to-red-500',
     icon: Layers,
     description: 'Boss-level pattern for state design, recurrence, and memoization.',
-    unlockHint: 'Unlocks after progress in Sliding Window and Binary Search.',
+    guidance: 'Advanced track. If you are already solving DP, the map respects that.',
   },
 ];
 
@@ -623,12 +623,12 @@ const SkillTree = memo(({
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
               <p className="text-sm font-semibold text-cyan-300 mb-2">skill tree</p>
-              <h3 className="text-3xl lg:text-4xl font-bold text-white">DSA progression map</h3>
+              <h3 className="text-3xl lg:text-4xl font-bold text-white">DSA skill map</h3>
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">completed</span>
-              <span className="px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300">available</span>
-              <span className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400">locked</span>
+              <span className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">mastered</span>
+              <span className="px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300">in progress</span>
+              <span className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400">not started</span>
             </div>
           </div>
 
@@ -636,7 +636,7 @@ const SkillTree = memo(({
             <div className="hidden md:block absolute left-[8%] right-[8%] top-[74px] h-1 rounded-full bg-white/10" />
             <motion.div
               initial={{ scaleX: 0 }}
-              animate={{ scaleX: nodes.length > 1 ? Math.max(0.08, (nodes.filter((node) => node.isUnlocked).length - 1) / (nodes.length - 1)) : 0 }}
+              animate={{ scaleX: nodes.length > 0 ? Math.max(0.04, nodes.reduce((sum, node) => sum + Math.min(node.mastery, 100), 0) / (nodes.length * 100)) : 0 }}
               transition={{ duration: 0.6 }}
               className="hidden md:block absolute left-[8%] right-[8%] top-[74px] h-1 rounded-full bg-gradient-to-r from-sky-400 via-cyan-400 to-emerald-400 origin-left"
             />
@@ -644,7 +644,7 @@ const SkillTree = memo(({
             {nodes.map((node, index) => {
               const Icon = node.icon;
               const isSelected = selectedNodeId === node.id;
-              const isLocked = !node.isUnlocked;
+              const isNotStarted = node.mastery === 0;
 
               return (
                 <motion.button
@@ -657,18 +657,18 @@ const SkillTree = memo(({
                   className={`relative text-left rounded-3xl border p-4 transition-all duration-150 min-h-[190px] ${
                     isSelected
                       ? 'bg-white/[0.08] border-cyan-400/50 shadow-2xl shadow-cyan-500/10'
-                      : isLocked
-                      ? 'bg-black/30 border-white/10 opacity-70 hover:opacity-90'
+                      : isNotStarted
+                      ? 'bg-black/35 border-white/10 hover:border-white/20 hover:bg-white/[0.045]'
                       : 'bg-black/40 border-white/10 hover:border-white/25 hover:bg-white/[0.06]'
                   }`}
                 >
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${node.color} flex items-center justify-center mb-4 shadow-lg ${isLocked ? 'grayscale opacity-60' : ''}`}>
-                    {isLocked ? <Lock className="w-6 h-6 text-white" /> : <Icon className="w-6 h-6 text-white" />}
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${node.color} flex items-center justify-center mb-4 shadow-lg ${isNotStarted ? 'opacity-80' : ''}`}>
+                    <Icon className="w-6 h-6 text-white" />
                   </div>
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>
                       <p className="text-lg font-bold text-white">{node.name}</p>
-                      <p className="text-xs text-gray-500">stage {index + 1}</p>
+                      <p className="text-xs text-gray-500">{node.statusLabel}</p>
                     </div>
                     {node.isComplete ? (
                       <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
@@ -683,8 +683,8 @@ const SkillTree = memo(({
                     />
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className={isLocked ? 'text-gray-500' : 'text-gray-300'}>{node.solved}/{node.total} solved</span>
-                    <span className={node.isComplete ? 'text-emerald-300' : isLocked ? 'text-gray-500' : 'text-cyan-300'}>{node.mastery}%</span>
+                    <span className={isNotStarted ? 'text-gray-500' : 'text-gray-300'}>{node.solved}/{node.total} solved</span>
+                    <span className={node.isComplete ? 'text-emerald-300' : isNotStarted ? 'text-gray-500' : 'text-cyan-300'}>{node.mastery}%</span>
                   </div>
                 </motion.button>
               );
@@ -721,20 +721,15 @@ const SkillTree = memo(({
           </div>
         </div>
 
-        {!selectedNode.isUnlocked ? (
-          <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <Lock className="w-5 h-5 text-gray-400" />
-              <p className="font-semibold text-white">locked path</p>
-            </div>
-            <p className="text-sm text-gray-400">{selectedNode.unlockHint}</p>
-          </div>
-        ) : selectedNode.questions?.length > 0 ? (
+        {selectedNode.questions?.length > 0 ? (
           <div>
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-bold text-white">practice quests</h4>
-              <span className="text-xs text-gray-500">{selectedNode.questions.length} problems</span>
+              <span className={`text-xs ${selectedNode.isGuidedNext ? 'text-cyan-300' : 'text-gray-500'}`}>
+                {selectedNode.isGuidedNext ? 'recommended next' : `${selectedNode.questions.length} problems`}
+              </span>
             </div>
+            <p className="text-xs text-gray-500 mb-4">{selectedNode.guidance}</p>
             <div className="space-y-3 max-h-[520px] overflow-y-auto custom-scrollbar pr-1">
               {selectedNode.questions.map((question) => (
                 <PracticeQuestionRow
@@ -748,8 +743,8 @@ const SkillTree = memo(({
           </div>
         ) : (
           <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-6">
-            <p className="text-sm font-semibold text-cyan-300 mb-2">foundation node</p>
-            <p className="text-sm text-gray-300">{selectedNode.unlockHint}</p>
+            <p className="text-sm font-semibold text-cyan-300 mb-2">{selectedNode.kind === 'preview' ? 'preview node' : 'foundation node'}</p>
+            <p className="text-sm text-gray-300">{selectedNode.guidance}</p>
           </div>
         )}
       </div>
@@ -1040,43 +1035,65 @@ const DashboardContent = memo(({ activeTab, reviews, patterns, leaderboard, onOp
     const twoPointers = patternByName.get('Two Pointers') || {};
     const slidingWindow = patternByName.get('Sliding Window') || {};
     const binarySearch = patternByName.get('Binary Search') || {};
+    const guidedNextPattern = practicePatterns
+      .filter((pattern) => pattern.solved < pattern.total)
+      .sort((a, b) => {
+        const aStarted = a.solved > 0 ? 0 : 1;
+        const bStarted = b.solved > 0 ? 0 : 1;
+        return aStarted - bStarted || a.mastery - b.mastery || a.name.localeCompare(b.name);
+      })[0]?.name;
 
-    const isUnlocked = {
-      'arrays-foundation': true,
-      'two-pointers': true,
-      'sliding-window': (twoPointers.solved || 0) >= 3 || (twoPointers.mastery || 0) >= 15,
-      'prefix-sum': (slidingWindow.solved || 0) >= 2 || (slidingWindow.mastery || 0) >= 10,
-      'binary-search': (twoPointers.solved || 0) >= 3 || (twoPointers.mastery || 0) >= 15,
-      'dynamic-programming': ((slidingWindow.solved || 0) >= 4 && (binarySearch.solved || 0) >= 3) || totalSolved >= 10,
+    const getStatusLabel = ({ mastery, solved, isGuidedNext, kind }) => {
+      if (kind === 'preview') return 'preview';
+      if (mastery >= 70) return 'mastered';
+      if (solved > 0) return 'in progress';
+      if (isGuidedNext) return 'suggested next';
+      return 'not started';
     };
 
     return SKILL_TREE_PATH.map((stage) => {
       const pattern = stage.patternName ? patternByName.get(stage.patternName) : null;
 
       if (pattern) {
+        const isGuidedNext = guidedNextPattern === pattern.name;
         return {
           ...stage,
           ...pattern,
           color: stage.color,
           icon: stage.icon,
           description: stage.description,
-          unlockHint: stage.unlockHint,
-          isUnlocked: isUnlocked[stage.id],
+          guidance: stage.guidance,
+          isGuidedNext,
+          statusLabel: getStatusLabel({
+            mastery: pattern.mastery,
+            solved: pattern.solved,
+            isGuidedNext,
+            kind: stage.kind
+          }),
           isComplete: pattern.mastery >= 70,
         };
       }
 
       const foundationMastery = totalQuestions > 0 ? Math.round((totalSolved / totalQuestions) * 100) : 0;
       const previewMastery = stage.id === 'prefix-sum' ? Math.min(100, Math.round(((slidingWindow.mastery || 0) + (binarySearch.mastery || 0)) / 2)) : foundationMastery;
+      const solved = stage.id === 'prefix-sum' ? 0 : totalSolved;
+      const total = stage.id === 'prefix-sum' ? 8 : Math.max(totalQuestions, 1);
+      const isGuidedNext = totalSolved === 0 && stage.id === 'arrays-foundation';
 
       return {
         ...stage,
-        solved: stage.id === 'prefix-sum' ? 0 : totalSolved,
-        total: stage.id === 'prefix-sum' ? 8 : Math.max(totalQuestions, 1),
+        solved,
+        total,
         mastery: stage.id === 'prefix-sum' ? previewMastery : foundationMastery,
         codeReviews: 0,
         questions: [],
-        isUnlocked: isUnlocked[stage.id],
+        isGuidedNext,
+        statusLabel: getStatusLabel({
+          mastery: stage.id === 'prefix-sum' ? previewMastery : foundationMastery,
+          solved,
+          isGuidedNext,
+          kind: stage.kind
+        }),
         isComplete: stage.id !== 'prefix-sum' && foundationMastery >= 20,
       };
     });
