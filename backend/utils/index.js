@@ -16,6 +16,7 @@ const fastHash = require('./fastHash');
 const responsePool = require('./responsePool');
 const tokenPool = require('./tokenPool');
 const cacheWarmer = require('./cacheWarmer');
+const username = require('./username');
 
 module.exports = {
   // Error classes
@@ -36,6 +37,7 @@ module.exports = {
   fastHash,
   responsePool,
   tokenPool,
-  cacheWarmer
+  cacheWarmer,
+  username
 };
 

@@ -16,6 +16,7 @@ const SignUp = lazy(() => import(/* webpackPrefetch: true */ './pages/SignUp'));
 const Login = lazy(() => import(/* webpackPrefetch: true */ './pages/Login'));
 const Dashboard = lazy(() => import(/* webpackPreload: true */ './pages/Dashboard'));
 const ReviewDetail = lazy(() => import(/* webpackPrefetch: true */ './pages/ReviewDetail'));
+const Profile = lazy(() => import(/* webpackPrefetch: true */ './pages/Profile'));
 
 // ⚡ Minimal loading component for better perceived performance
 const PageLoader = () => (
@@ -84,13 +85,33 @@ function App() {
         />
         
         {/* Review Detail */}
-        <Route 
-          path="/review/:id" 
+        <Route
+          path="/review/:id"
           element={
             <Suspense fallback={<PageLoader />}>
               <ReviewDetail />
             </Suspense>
-          } 
+          }
+        />
+
+        {/* Own profile */}
+        <Route
+          path="/profile"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Profile />
+            </Suspense>
+          }
+        />
+
+        {/* Public profile */}
+        <Route
+          path="/u/:username"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Profile />
+            </Suspense>
+          }
         />
       </Routes>
     </Router>

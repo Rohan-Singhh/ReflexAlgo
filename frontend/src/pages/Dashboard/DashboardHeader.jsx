@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react';
-import { LogOut, Crown, Zap, Bell, Camera, CreditCard, Gauge, CheckCircle, Trophy, Sparkles, ShieldCheck, Inbox } from 'lucide-react';
+import { LogOut, Crown, Zap, Bell, Camera, CreditCard, Gauge, CheckCircle, Trophy, Sparkles, ShieldCheck, Inbox, UserCircle, LayoutGrid, FileCode, Layers, Sparkle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import dashboardService from '../../services/dashboardService';
@@ -58,32 +58,32 @@ const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onL
   
   // Plan badge colors and icons
   const planConfig = {
-    starter: { 
-      label: 'free', 
+    starter: {
+      label: 'Free',
       color: 'from-gray-500/10 to-gray-600/10', 
       borderColor: 'border-gray-500/20 hover:border-gray-500/40',
       textColor: 'text-gray-400',
       dotColor: 'text-gray-600 group-hover:text-gray-500',
       upgradeText: '• upgrade'
     },
-    pro: { 
-      label: 'pro', 
+    pro: {
+      label: 'Pro',
       color: 'from-yellow-500/10 to-orange-500/10', 
       borderColor: 'border-yellow-500/20 hover:border-yellow-500/40',
       textColor: 'text-yellow-400',
       dotColor: 'text-yellow-600 group-hover:text-yellow-500',
       upgradeText: ''
     },
-    team: { 
-      label: 'team', 
+    team: {
+      label: 'Team',
       color: 'from-green-500/10 to-emerald-500/10', 
       borderColor: 'border-green-500/20 hover:border-green-500/40',
       textColor: 'text-green-400',
       dotColor: 'text-green-600 group-hover:text-green-500',
       upgradeText: ''
     },
-    enterprise: { 
-      label: 'enterprise', 
+    enterprise: {
+      label: 'Enterprise',
       color: 'from-purple-500/10 to-indigo-500/10', 
       borderColor: 'border-purple-500/20 hover:border-purple-500/40',
       textColor: 'text-purple-400',
@@ -143,67 +143,40 @@ const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onL
         <div className="flex justify-between items-center h-24">
           <div className="flex items-center space-x-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center space-x-3 group cursor-pointer">
-              <motion.div 
-                className="relative"
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl blur-md opacity-40 group-hover:opacity-70 transition-opacity duration-200" />
-                <div className="relative bg-gradient-to-br from-indigo-500 to-purple-500 p-3 rounded-xl">
-                  <motion.div
-                    whileHover={{ rotate: [0, -15, 15, -15, 0], scale: [1, 1.1, 1.1, 1.1, 1] }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <Zap className="w-6 h-6 text-white" strokeWidth={2.5} />
-                  </motion.div>
-                </div>
-              </motion.div>
-              <div>
-                <span className="text-lg font-bold text-white block leading-none tracking-tight group-hover:text-purple-300 transition-colors duration-150">ReflexAlgo</span>
-                <span className="text-xs text-gray-600 leading-none">dashboard</span>
+            <Link to="/" className="flex items-center gap-2.5 group cursor-pointer">
+              <div className="grid place-items-center w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-900/40">
+                <Sparkle className="w-4 h-4 text-white" fill="currentColor" strokeWidth={2.5} />
+              </div>
+              <div className="leading-none">
+                <span className="block text-[15px] font-semibold tracking-tight text-white">
+                  Reflex<span className="text-zinc-400">Algo</span>
+                </span>
+                <span className="block text-[11px] text-zinc-600 mt-0.5">Dashboard</span>
               </div>
             </Link>
 
             {/* Navigation Tabs */}
-            <nav className="hidden lg:flex items-center space-x-1">
+            <nav className="hidden lg:flex items-center gap-1">
               {[
-                { id: 'overview', label: 'overview', icon: '🏠' },
-                { id: 'reviews', label: 'reviews', icon: '📝' },
-                { id: 'patterns', label: 'patterns', icon: '🧠' },
-                { id: 'leaderboard', label: 'leaderboard', icon: '🏆' },
+                { id: 'overview', label: 'Overview', icon: LayoutGrid },
+                { id: 'reviews', label: 'Reviews', icon: FileCode },
+                { id: 'patterns', label: 'Patterns', icon: Layers },
+                { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
               ].map((tab) => (
-                <motion.button
+                <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  whileHover={{ y: -2, scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className={`relative px-6 py-3 rounded-2xl text-sm font-medium transition-all duration-150 cursor-pointer ${
+                  className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-colors duration-150 cursor-pointer ${
                     activeTab === tab.id
-                      ? 'text-white bg-white/10'
-                      : 'text-gray-500 hover:text-white hover:bg-white/5'
+                      ? 'text-white bg-white/[0.07]'
+                      : 'text-zinc-500 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
-                  <span className="flex items-center gap-2.5">
-                    <motion.span 
-                      className="text-base"
-                      whileHover={{ rotate: [0, -10, 10, -10, 0] }}
-                      transition={{ duration: 0.5 }}
-                    >
-                      {tab.icon}
-                    </motion.span>
+                  <span className="flex items-center gap-2">
+                    <tab.icon className="w-4 h-4" strokeWidth={1.75} />
                     <span>{tab.label}</span>
                   </span>
-                  {activeTab === tab.id && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                    />
-                  )}
-                </motion.button>
+                </button>
               ))}
             </nav>
           </div>
@@ -278,9 +251,9 @@ const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onL
                     <div className="p-5 border-b border-white/10 bg-gradient-to-r from-white/[0.06] to-white/[0.02]">
                       <div className="flex items-center justify-between gap-4">
                         <div>
-                          <h3 className="text-lg font-bold text-white">notifications</h3>
+                          <h3 className="text-base font-semibold text-white">Notifications</h3>
                           <p className="text-xs text-gray-500">
-                            {unreadCount > 0 ? `${unreadCount} unread update${unreadCount === 1 ? '' : 's'}` : 'all caught up'}
+                            {unreadCount > 0 ? `${unreadCount} unread update${unreadCount === 1 ? '' : 's'}` : 'All caught up'}
                           </p>
                         </div>
                         <button
@@ -288,7 +261,7 @@ const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onL
                           onClick={loadNotifications}
                           className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-gray-300 transition-colors"
                         >
-                          refresh
+                          Refresh
                         </button>
                       </div>
                     </div>
@@ -297,7 +270,7 @@ const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onL
                       {isLoadingNotifications ? (
                         <div className="py-10 flex flex-col items-center gap-3">
                           <div className="w-7 h-7 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                          <p className="text-sm text-gray-500">loading updates...</p>
+                          <p className="text-sm text-gray-500">Loading updates…</p>
                         </div>
                       ) : notificationError ? (
                         <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-200">
@@ -306,8 +279,8 @@ const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onL
                       ) : notifications.length === 0 ? (
                         <div className="py-10 text-center">
                           <Inbox className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-                          <p className="text-sm font-semibold text-white">no notifications yet</p>
-                          <p className="text-xs text-gray-500 mt-1">plan changes and review updates will appear here</p>
+                          <p className="text-sm font-semibold text-white">No notifications yet</p>
+                          <p className="text-xs text-gray-500 mt-1">Plan changes and review updates will appear here</p>
                         </div>
                       ) : (
                         <div className="space-y-2">
@@ -393,6 +366,19 @@ const DashboardHeader = memo(({ user, subscription, activeTab, setActiveTab, onL
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     className="absolute right-0 top-full mt-2 w-56 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
                   >
+                    <button
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        navigate('/profile');
+                      }}
+                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors duration-150 text-left border-b border-white/5"
+                    >
+                      <UserCircle className="w-5 h-5 text-indigo-400" />
+                      <div>
+                        <p className="text-sm font-medium text-white">View profile</p>
+                        <p className="text-xs text-gray-500">Your public profile & stats</p>
+                      </div>
+                    </button>
                     <button
                       onClick={() => {
                         setShowProfileDropdown(false);

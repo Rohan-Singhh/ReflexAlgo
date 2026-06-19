@@ -3,6 +3,7 @@ const { errorHandler } = require('../utils');
 const aiService = require('../services/ai.service');
 const subscriptionService = require('../services/subscription.service');
 const roadmapCoachService = require('../services/roadmapCoach.service');
+const achievementService = require('../services/achievement.service');
 
 /**
  * Deep parse JSON - recursively parse stringified JSON
@@ -542,9 +543,18 @@ async function processReview(reviewId, subscription) {
       improvementPercent
     );
 
+    // Evaluate achievements against the freshly updated progress (mutates badges)
+    const newAchievements = achievementService.evaluateAchievements(progress);
+
     roadmapCoachService.invalidateRoadmapCoach(progress);
     await progress.save();
     console.log(`📊 ✅ User progress saved successfully!`);
+
+    // Notify the user of any newly unlocked achievements (best-effort)
+    if (newAchievements.length > 0) {
+      await achievementService.createAchievementNotifications(updatedReview.user, newAchievements);
+      console.log(`🏅 Awarded ${newAchievements.length} achievement(s)`);
+    }
     console.log(`📊 Final stats: ${progress.stats.totalReviews} reviews, ${progress.stats.currentStreak} day streak, ${Math.round(progress.stats.averageImprovement)}% avg improvement`);
     if (patternsUpdated > 0) {
       console.log(`Updated real-code mastery for ${patternsUpdated} pattern(s)`);

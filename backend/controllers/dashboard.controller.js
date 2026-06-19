@@ -1,5 +1,5 @@
 const { UserProgress, CodeReview, Leaderboard, Notification, DSAPattern } = require('../models');
-const { subscriptionService, roadmapCoachService } = require('../services');
+const { subscriptionService, roadmapCoachService, achievementService } = require('../services');
 const { errorHandler } = require('../utils');
 
 // ⚡ OPTIMIZED: Advanced in-memory response cache with LRU eviction
@@ -321,8 +321,13 @@ exports.updatePracticeProgress = errorHandler(async (req, res) => {
     pointsDelta = -removedPoints;
   }
 
+  const newAchievements = achievementService.evaluateAchievements(progress);
   roadmapCoachService.invalidateRoadmapCoach(progress);
   await progress.save();
+
+  if (newAchievements.length > 0) {
+    await achievementService.createAchievementNotifications(userId, newAchievements);
+  }
 
   const leaderboardUpdate = await refreshPracticeLeaderboard(userId, progress);
   invalidateCache(`stats:${userId}`);

@@ -1,7 +1,7 @@
 const { User } = require('../models');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { fastHash, tokenPool, cacheWarmer } = require('../utils');
+const { fastHash, tokenPool, cacheWarmer, username: usernameUtil } = require('../utils');
 const subscriptionService = require('./subscription.service');
 
 // ⚡ OPTIMIZATION #4: Optimized bcrypt rounds
@@ -166,10 +166,14 @@ class AuthService {
       throw error;
     }
 
+    // Generate a unique public-profile username derived from name/email
+    const username = await usernameUtil.generateUniqueUsername(User, { name, email });
+
     const user = await User.create({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      username
     });
 
     // ⚡ IMPORTANT: Create subscription synchronously to avoid race conditions
@@ -188,7 +192,8 @@ class AuthService {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        username: user.username
       },
       token
     };
@@ -215,7 +220,7 @@ class AuthService {
 
     if (!user) {
       // Cache miss - query database (⚡ EXTREME: only fetch needed fields)
-      user = await User.findOne({ email }).select('_id name email password profilePhoto');
+      user = await User.findOne({ email }).select('_id name email password profilePhoto username');
       
       if (!user) {
         const error = new Error('No account found with this email. Please sign up first.');
@@ -229,7 +234,7 @@ class AuthService {
       // ⚡ FIXED: Cache hit - we already have the user, just need password
       // Only query if cached user doesn't have password
       if (!user.password) {
-        user = await User.findOne({ email }).select('_id name email password profilePhoto');
+        user = await User.findOne({ email }).select('_id name email password profilePhoto username');
         if (!user) {
           const error = new Error('No account found with this email. Please sign up first.');
           error.statusCode = 404;
@@ -262,6 +267,7 @@ class AuthService {
         id: user._id,
         name: user.name,
         email: user.email,
+        username: user.username,
         profilePhoto: user.profilePhoto || null
       },
       token
@@ -278,7 +284,7 @@ class AuthService {
 
     // Cache miss - query database (only fetch needed fields!)
     const user = await User.findById(userId)
-      .select('_id name email profilePhoto') // ⚡ EXTREME: 30-50% faster query
+      .select('_id name email profilePhoto username') // ⚡ EXTREME: 30-50% faster query
       .lean(); // .lean() for speed
     
     if (!user) {
@@ -330,7 +336,7 @@ class AuthService {
     const user = await User.findByIdAndUpdate(
       userId,
       { profilePhoto },
-      { new: true, select: '_id name email profilePhoto' }
+      { new: true, select: '_id name email profilePhoto username' }
     ).lean();
 
     if (!user) {

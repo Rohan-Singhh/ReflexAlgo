@@ -1,176 +1,102 @@
 import { memo } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Zap, Crown } from 'lucide-react';
+import { TrendingUp, Zap, Crown, ArrowUpRight } from 'lucide-react';
+
+const PLAN_LABEL = { pro: 'Pro', team: 'Team', enterprise: 'Enterprise' };
 
 const DashboardWelcome = memo(({ user, stats, subscription, onOpenPricing }) => {
-  const isPro = subscription && subscription.plan !== 'starter';
-  
-  // 🎨 Cool dynamic greeting based on time & randomness
-  const getCoolGreeting = () => {
+  const isPaid = subscription && subscription.plan !== 'starter';
+  const firstName = user?.name?.split(' ')[0] || 'there';
+
+  const getGreeting = () => {
     const hour = new Date().getHours();
-    const firstName = user?.name?.split(' ')[0] || 'friend';
-    
-    const greetings = {
-      morning: [
-        `rise & shine, ${firstName} ☀️`,
-        `good morning, ${firstName} 🌅`,
-        `wakey wakey, ${firstName} ☕`,
-        `fresh start, ${firstName} 🚀`,
-        `morning grind, ${firstName} 💪`
-      ],
-      afternoon: [
-        `afternoon vibes, ${firstName} 🌤️`,
-        `crushing it, ${firstName} 🔥`,
-        `keep going, ${firstName} ⚡`,
-        `you're on fire, ${firstName} 🚀`,
-        `stay focused, ${firstName} 🎯`
-      ],
-      evening: [
-        `evening warrior, ${firstName} 🌙`,
-        `night owl mode, ${firstName} 🦉`,
-        `late night hustle, ${firstName} 💻`,
-        `burning midnight oil, ${firstName} 🔥`,
-        `still grinding, ${firstName} 💪`
-      ],
-      night: [
-        `night mode: on, ${firstName} 🌃`,
-        `late night legend, ${firstName} 🌙`,
-        `coding in the dark, ${firstName} 💻`,
-        `midnight champion, ${firstName} 🦇`,
-        `nocturnal dev, ${firstName} 🖤`
-      ]
-    };
-    
-    let timeOfDay;
-    if (hour >= 5 && hour < 12) timeOfDay = 'morning';
-    else if (hour >= 12 && hour < 17) timeOfDay = 'afternoon';
-    else if (hour >= 17 && hour < 22) timeOfDay = 'evening';
-    else timeOfDay = 'night';
-    
-    const options = greetings[timeOfDay];
-    return options[Math.floor(Math.random() * options.length)];
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    if (hour < 22) return 'Good evening';
+    return 'Working late';
   };
-  
-  // Calculate subscription status text with actual date
-  const getSubscriptionStatus = () => {
-    if (!subscription || subscription.plan === 'starter') {
-      return '';
-    }
-    
-    // If subscription is cancelled or has end date
-    if (subscription.endDate) {
-      const endDate = new Date(subscription.endDate);
-      return `expires ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-    }
-    
-    // If next billing date is available
-    if (subscription.paymentInfo?.nextBillingDate) {
-      const nextBilling = new Date(subscription.paymentInfo.nextBillingDate);
-      return `renews ${nextBilling.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-    }
-    
-    // Calculate next billing date based on start date or last payment
-    const baseDate = subscription.paymentInfo?.lastPaymentDate 
-      ? new Date(subscription.paymentInfo.lastPaymentDate)
-      : new Date(subscription.startDate || Date.now());
-    
-    const nextBillingDate = new Date(baseDate);
-    
-    // Add billing cycle period
-    if (subscription.billingCycle === 'yearly') {
-      nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
-    } else {
-      nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
-    }
-    
-    return `renews ${nextBillingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+  const getRenewalText = () => {
+    if (!subscription || subscription.plan === 'starter') return '';
+    const fmt = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (subscription.endDate) return `Expires ${fmt(subscription.endDate)}`;
+    if (subscription.paymentInfo?.nextBillingDate) return `Renews ${fmt(subscription.paymentInfo.nextBillingDate)}`;
+    const base = subscription.paymentInfo?.lastPaymentDate || subscription.startDate || Date.now();
+    const next = new Date(base);
+    if (subscription.billingCycle === 'yearly') next.setFullYear(next.getFullYear() + 1);
+    else next.setMonth(next.getMonth() + 1);
+    return `Renews ${fmt(next)}`;
   };
-  
-  const subscriptionStatus = getSubscriptionStatus();
+
+  const xpPct = stats?.experienceToNextLevel
+    ? Math.min(100, Math.round((stats.experience / stats.experienceToNextLevel) * 100))
+    : 0;
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.2 }}
-      className="mb-20"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="mb-16"
     >
-      <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8">
-        <div className="flex-1">
-          <p className="text-sm text-gray-500 mb-3 tracking-wide uppercase">dashboard</p>
-                <h1 className="text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
-                  {getCoolGreeting()}
-                </h1>
-          <p className="text-gray-400 text-2xl font-light max-w-2xl leading-relaxed">
-            ready to make your code <span className="text-gradient font-semibold">lightning fast?</span> 
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-600 mb-3">Dashboard</p>
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+            {getGreeting()}, {firstName}
+          </h1>
+          <p className="mt-2 text-base text-zinc-400">
+            Here's where your code optimization stands today.
           </p>
         </div>
-        
-        <div className="flex items-center gap-5">
-          <motion.div 
-            whileHover={{ y: -2 }}
-            transition={{ duration: 0.15 }}
-            className="px-8 py-5 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl hover:bg-white/10 transition-all duration-150 cursor-pointer group"
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="w-4 h-4 text-purple-400" />
-              <p className="text-xs text-gray-500 uppercase tracking-wider">world rank</p>
-            </div>
-            <p className="text-4xl font-bold text-white">#{stats?.rank || '—'}</p>
-            <p className="text-xs text-green-400 mt-1">
-              {stats?.rankChange > 0 ? `↑ ${stats.rankChange}` : stats?.rankChange < 0 ? `↓ ${Math.abs(stats.rankChange)}` : '—'} this week
-            </p>
-          </motion.div>
-          
-          <motion.div 
-            whileHover={{ y: -2 }}
-            transition={{ duration: 0.15 }}
-            className="px-8 py-5 bg-gradient-to-br from-purple-600/10 to-indigo-600/10 border border-purple-500/20 rounded-2xl backdrop-blur-xl hover:border-purple-500/40 transition-all duration-150 cursor-pointer group"
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <Zap className="w-4 h-4 text-yellow-400" />
-              <p className="text-xs text-gray-500 uppercase tracking-wider">level</p>
-            </div>
-            <p className="text-4xl font-bold text-white">{stats?.level || 1}</p>
-            <p className="text-xs text-purple-400 mt-1">
-              {stats?.experienceToNextLevel ? `${Math.round((stats.experience / stats.experienceToNextLevel) * 100)}% to level ${(stats.level || 1) + 1}` : 'Level up!'}
-            </p>
-          </motion.div>
 
-          {/* Upgrade CTA or Pro Status */}
-          {isPro ? (
-            <motion.div
-              whileHover={{ y: -2 }}
-              transition={{ duration: 0.15 }}
-              className="px-8 py-5 bg-gradient-to-br from-purple-600/20 to-blue-600/20 border border-purple-500/30 rounded-2xl backdrop-blur-xl hover:border-purple-500/50 transition-all duration-150 cursor-pointer group"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <Crown className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform duration-150" />
-                <p className="text-xs text-gray-500 uppercase tracking-wider">status</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {/* World rank */}
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-5 py-4">
+            <div className="flex items-center gap-2 mb-2 text-zinc-500">
+              <TrendingUp className="w-4 h-4 text-violet-300" />
+              <span className="text-xs">World rank</span>
+            </div>
+            <p className="text-2xl font-semibold text-white">{stats?.rank ? `#${stats.rank}` : '—'}</p>
+            <p className="text-xs text-zinc-500 mt-1">
+              {stats?.rankChange > 0 ? `▲ ${stats.rankChange} this week`
+                : stats?.rankChange < 0 ? `▼ ${Math.abs(stats.rankChange)} this week`
+                : 'No change'}
+            </p>
+          </div>
+
+          {/* Level */}
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-5 py-4">
+            <div className="flex items-center gap-2 mb-2 text-zinc-500">
+              <Zap className="w-4 h-4 text-amber-300" />
+              <span className="text-xs">Level</span>
+            </div>
+            <p className="text-2xl font-semibold text-white">{stats?.level || 1}</p>
+            <p className="text-xs text-zinc-500 mt-1">{xpPct}% to level {(stats?.level || 1) + 1}</p>
+          </div>
+
+          {/* Plan / upgrade */}
+          {isPaid ? (
+            <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.06] px-5 py-4 col-span-2 sm:col-span-1">
+              <div className="flex items-center gap-2 mb-2 text-zinc-500">
+                <Crown className="w-4 h-4 text-violet-300" />
+                <span className="text-xs">Plan</span>
               </div>
-              <p className="text-2xl font-bold text-white">
-                {subscription.plan === 'pro' && '✨ pro'}
-                {subscription.plan === 'team' && '🚀 team'}
-                {subscription.plan === 'enterprise' && '💎 enterprise'}
-              </p>
-              <p className="text-xs text-purple-400 mt-1">
-                {subscriptionStatus}
-              </p>
-            </motion.div>
+              <p className="text-2xl font-semibold text-white">{PLAN_LABEL[subscription.plan] || 'Pro'}</p>
+              <p className="text-xs text-zinc-500 mt-1">{getRenewalText()}</p>
+            </div>
           ) : (
-            <motion.button
+            <button
               onClick={onOpenPricing}
-              whileHover={{ y: -2 }}
-              transition={{ duration: 0.15 }}
-              className="px-8 py-5 bg-gradient-to-br from-yellow-600/20 to-orange-600/20 border border-yellow-500/30 rounded-2xl backdrop-blur-xl hover:border-yellow-500/50 transition-all duration-150 cursor-pointer group"
+              className="group text-left rounded-2xl border border-white/[0.08] bg-white/[0.02] px-5 py-4 col-span-2 sm:col-span-1 hover:border-violet-500/30 transition-colors"
             >
-              <div className="flex items-center gap-3 mb-2">
-                <Crown className="w-4 h-4 text-yellow-400 group-hover:scale-110 transition-transform duration-150" />
-                <p className="text-xs text-gray-500 uppercase tracking-wider">upgrade</p>
+              <div className="flex items-center justify-between mb-2 text-zinc-500">
+                <span className="flex items-center gap-2"><Crown className="w-4 h-4 text-amber-300" /><span className="text-xs">Plan</span></span>
+                <ArrowUpRight className="w-4 h-4 text-zinc-600 group-hover:text-violet-300 transition-colors" />
               </div>
-              <p className="text-2xl font-bold text-white">unlock pro</p>
-              <p className="text-xs text-yellow-400 mt-1">from $4/month</p>
-            </motion.button>
+              <p className="text-2xl font-semibold text-white">Upgrade</p>
+              <p className="text-xs text-zinc-500 mt-1">Unlock Pro from $4/mo</p>
+            </button>
           )}
         </div>
       </div>
@@ -181,4 +107,3 @@ const DashboardWelcome = memo(({ user, stats, subscription, onOpenPricing }) => 
 DashboardWelcome.displayName = 'DashboardWelcome';
 
 export default DashboardWelcome;
-

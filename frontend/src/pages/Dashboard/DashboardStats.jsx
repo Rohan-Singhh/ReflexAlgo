@@ -1,102 +1,40 @@
 import { memo } from 'react';
 import { motion } from 'framer-motion';
-import { Code2, Zap, TrendingUp, Flame, Trophy, Target, Rocket } from 'lucide-react';
+import { Code2, Zap, Rocket, Flame } from 'lucide-react';
 
-const getStatsData = (dashboardStats) => [
-  { 
-    label: 'total reviews', 
-    value: String(dashboardStats?.totalReviews || 0), 
-    icon: Code2, 
-    color: 'from-blue-500 to-cyan-500', 
-    change: `${dashboardStats?.totalReviews || 0} total`,
-    subtitle: 'this month',
-    bgGlow: 'blue'
-  },
-  { 
-    label: 'optimizations', 
-    value: String(dashboardStats?.optimizedReviews || 0), 
-    icon: Zap, 
-    color: 'from-purple-500 to-pink-500', 
-    change: `${Math.round((dashboardStats?.optimizedReviews / Math.max(dashboardStats?.totalReviews, 1)) * 100) || 0}%`,
-    subtitle: 'success rate',
-    bgGlow: 'purple'
-  },
-  { 
-    label: 'avg improvement', 
-    value: `${Math.round(dashboardStats?.averageImprovement || 0)}%`, 
-    icon: Rocket, 
-    color: 'from-emerald-500 to-green-500', 
-    change: 'great!',
-    subtitle: 'code quality',
-    bgGlow: 'emerald'
-  },
-  { 
-    label: 'streak 🔥', 
-    value: String(dashboardStats?.currentStreak || 0), 
-    icon: Flame, 
-    color: 'from-orange-500 to-red-500', 
-    change: 'keep going!',
-    subtitle: 'days coding',
-    bgGlow: 'orange'
-  },
-];
+const getStatsData = (s) => {
+  const total = s?.totalReviews || 0;
+  const optimized = s?.optimizedReviews || 0;
+  const successRate = total > 0 ? Math.round((optimized / total) * 100) : 0;
+  return [
+    { label: 'Total reviews', value: String(total), icon: Code2, accent: 'text-sky-300', sub: 'All time' },
+    { label: 'Optimizations', value: String(optimized), icon: Zap, accent: 'text-violet-300', sub: `${successRate}% success rate` },
+    { label: 'Avg improvement', value: `${Math.round(s?.averageImprovement || 0)}%`, icon: Rocket, accent: 'text-emerald-300', sub: 'Across reviews' },
+    { label: 'Current streak', value: `${s?.currentStreak || 0}`, icon: Flame, accent: 'text-orange-300', sub: s?.currentStreak === 1 ? 'day' : 'days' },
+  ];
+};
 
 const DashboardStats = memo(({ dashboardStats }) => {
   const stats = getStatsData(dashboardStats);
-  
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8 mb-20">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-16">
       {stats.map((stat, index) => (
         <motion.div
-          key={index}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ 
-            duration: 0.2,
-            delay: index * 0.05
-          }}
-          whileHover={{ y: -4 }}
-          className="relative bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-white/5 rounded-3xl p-8 overflow-hidden group cursor-pointer hover:border-white/20 transition-all duration-150"
+          key={stat.label}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: index * 0.05 }}
+          className="group rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 transition-colors duration-200 hover:border-white/15"
         >
-          {/* Animated background glow */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-[0.08] transition-all duration-300`} />
-          
-          {/* Floating orb effect */}
-          <div className={`absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br ${stat.color} rounded-full blur-3xl opacity-[0.15] group-hover:opacity-25 transition-opacity duration-300`} />
-          
-          <div className="relative z-10">
-            {/* Change badge - top right */}
-            <div className="absolute top-0 right-0 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-              <span className="text-xs text-emerald-400 font-semibold">{stat.change}</span>
+          <div className="flex items-center justify-between mb-6">
+            <div className="grid place-items-center w-10 h-10 rounded-xl border border-white/10 bg-white/[0.03]">
+              <stat.icon className={`w-5 h-5 ${stat.accent}`} strokeWidth={1.75} />
             </div>
-
-            {/* Icon */}
-            <div className="mb-8">
-              <div className="relative inline-block">
-                <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} blur-xl opacity-40 group-hover:opacity-70 transition-opacity`} />
-                <div className={`relative p-4 rounded-2xl bg-gradient-to-br ${stat.color} shadow-2xl`}>
-                  <stat.icon className="w-7 h-7 text-white" strokeWidth={2} />
-                </div>
-              </div>
-            </div>
-            
-            {/* Value */}
-            <p className="text-5xl font-bold text-white mb-3 tracking-tighter">
-              {stat.value}
-            </p>
-            
-            {/* Label */}
-            <p className="text-sm font-medium text-gray-400 mb-1.5">{stat.label}</p>
-            <p className="text-xs text-gray-600">{stat.subtitle}</p>
           </div>
-
-          {/* Shine effect on hover */}
-          <div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)',
-            }}
-          />
+          <p className="text-4xl font-semibold tracking-tight text-white">{stat.value}</p>
+          <p className="mt-2 text-sm font-medium text-zinc-300">{stat.label}</p>
+          <p className="text-xs text-zinc-500 mt-0.5">{stat.sub}</p>
         </motion.div>
       ))}
     </div>
@@ -106,4 +44,3 @@ const DashboardStats = memo(({ dashboardStats }) => {
 DashboardStats.displayName = 'DashboardStats';
 
 export default DashboardStats;
-

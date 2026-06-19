@@ -35,6 +35,38 @@ const validateRegister = [
     .matches(PASSWORD_REGEX).withMessage(PASSWORD_FORMAT)
 ];
 
+// Pre-compiled username pattern (lowercase letters, numbers, underscores)
+const USERNAME_REGEX = /^[a-z0-9_]+$/;
+
+// Validation rules for profile updates (all fields optional / partial update)
+const validateProfileUpdate = [
+  body('name')
+    .optional().trim()
+    .isLength({ min: 2, max: 50 }).withMessage(NAME_LENGTH)
+    .matches(NAME_REGEX).withMessage(NAME_FORMAT),
+
+  body('username')
+    .optional().trim().toLowerCase()
+    .isLength({ min: 3, max: 30 }).withMessage('Username must be between 3 and 30 characters')
+    .matches(USERNAME_REGEX).withMessage('Username can only contain lowercase letters, numbers, and underscores'),
+
+  body('headline').optional().trim().isLength({ max: 80 }).withMessage('Headline cannot exceed 80 characters'),
+  body('bio').optional().trim().isLength({ max: 280 }).withMessage('Bio cannot exceed 280 characters'),
+  body('location').optional().trim().isLength({ max: 80 }).withMessage('Location cannot exceed 80 characters'),
+  body('goal').optional().trim().isLength({ max: 120 }).withMessage('Goal cannot exceed 120 characters'),
+
+  body('links.github').optional({ checkFalsy: true }).trim().isURL().withMessage('GitHub link must be a valid URL'),
+  body('links.linkedin').optional({ checkFalsy: true }).trim().isURL().withMessage('LinkedIn link must be a valid URL'),
+  body('links.website').optional({ checkFalsy: true }).trim().isURL().withMessage('Website link must be a valid URL'),
+  body('links.twitter').optional({ checkFalsy: true }).trim().isURL().withMessage('Twitter link must be a valid URL'),
+
+  body('preferredLanguages').optional().isArray({ max: 12 }).withMessage('Too many languages selected'),
+
+  body('visibility.isPublic').optional().isBoolean().withMessage('isPublic must be a boolean'),
+  body('visibility.showActivity').optional().isBoolean().withMessage('showActivity must be a boolean'),
+  body('visibility.showReviews').optional().isBoolean().withMessage('showReviews must be a boolean')
+];
+
 // Validation rules for login
 const validateLogin = [
   body('email')
@@ -85,5 +117,6 @@ const handleValidationErrors = (req, res, next) => {
 module.exports = {
   validateRegister,
   validateLogin,
+  validateProfileUpdate,
   handleValidationErrors
 };

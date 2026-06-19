@@ -40,14 +40,16 @@ if (!OPENROUTER_API_KEY) {
   console.warn('⚠️ OpenRouter API key not set - using mock analysis');
 }
 
-// Default model to use - prioritize fast, free models
-const DEFAULT_MODEL = 'meta-llama/llama-4-maverick:free';
+// Default model — Qwen3 Coder is the strongest free coding model on OpenRouter
+// (large context, state-of-the-art code generation). See FREE_CODE_MODELS for
+// the fallback rotation; free routes change, so keep alternatives available.
+const DEFAULT_MODEL = 'qwen/qwen3-coder:free';
 
-// Available free models optimized for code analysis
+// Free models optimized for code analysis, in preference order.
 const FREE_CODE_MODELS = [
-  'meta-llama/llama-4-maverick:free',
-  'deepseek/deepseek-v3-base:free',
-  'mistralai/mistral-small-3.1-24b-instruct:free'
+  'qwen/qwen3-coder:free',
+  'openai/gpt-oss-120b:free',
+  'deepseek/deepseek-r1:free'
 ];
 
 /**
@@ -59,6 +61,18 @@ const getSystemPrompt = (model) => {
   const basePrompt = `You are an expert code optimization engineer specialized in data structures and algorithms.
 Your task is to analyze code for time/space complexity, detect optimization opportunities, identify DSA patterns,
 and provide actionable suggestions. Focus on accuracy and practical improvements.`;
+
+  if (model?.includes('qwen')) {
+    return `${basePrompt}
+
+Respond with a single valid JSON object only. No markdown fences, no commentary, no text before or after the JSON. The output must be directly parseable by JSON.parse().`;
+  }
+
+  if (model?.includes('gpt-oss') || model?.includes('openai')) {
+    return `${basePrompt}
+
+Return only a valid JSON object. Do not include markdown code fences or any explanatory text.`;
+  }
 
   if (model?.includes('llama')) {
     return `${basePrompt}
@@ -359,7 +373,13 @@ const analyzeCode = async (code, language, title, options = {}) => {
     };
 
     // Model-specific optimizations
-    if (model.includes('deepseek')) {
+    if (model.includes('qwen')) {
+      settings.temperature = 0.3; // Tight, consistent JSON for code
+      settings.max_tokens = 4000;
+    } else if (model.includes('gpt-oss') || model.includes('openai')) {
+      settings.temperature = 0.3;
+      settings.max_tokens = 4000;
+    } else if (model.includes('deepseek')) {
       settings.temperature = 0.3; // Most consistent JSON
       settings.max_tokens = 4000; // Full detailed analysis
     } else if (model.includes('llama')) {
@@ -381,7 +401,10 @@ const analyzeCode = async (code, language, title, options = {}) => {
         ],
         temperature: settings.temperature,
         max_tokens: settings.max_tokens,
-        top_p: settings.top_p
+        top_p: settings.top_p,
+        // Request structured JSON output where the model/provider supports it.
+        // OpenRouter ignores this for models that don't; parsing has a fallback.
+        response_format: { type: 'json_object' }
       },
       {
         headers: {

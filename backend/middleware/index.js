@@ -3,7 +3,7 @@ const { protect } = require('./auth.middleware');
 const { errorHandler, asyncHandler } = require('./errorHandler.middleware');
 const { apiLimiter, authLimiter, passwordResetLimiter } = require('./rateLimiter.middleware');
 const addRequestId = require('./requestId.middleware');
-const { validateRegister, validateLogin, handleValidationErrors } = require('./sanitize.middleware');
+const { validateRegister, validateLogin, validateProfileUpdate, handleValidationErrors } = require('./sanitize.middleware');
 const { preventNoSQLInjection, preventXSS, preventHPP } = require('./security.middleware');
 
 module.exports = {
@@ -25,6 +25,7 @@ module.exports = {
   // Validation
   validateRegister,
   validateLogin,
+  validateProfileUpdate,
   handleValidationErrors,
   
   // Security
