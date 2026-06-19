@@ -12,7 +12,8 @@ export default defineConfig({
     })
   ],
   server: {
-    port: 5173, // Changed from 3000 to match actual running port
+    // Honor a PORT env override (e.g. preview harness) but default to 5173 for `npm run dev`
+    port: process.env.PORT ? Number(process.env.PORT) : 5173,
     fs: {
       allow: ['..'],
     },

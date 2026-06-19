@@ -1,140 +1,198 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Play, Check, TrendingDown, Braces } from 'lucide-react';
 import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from './ui/Button';
 import DemoModal from './DemoModal';
 
+const trustChips = ['Free to start', '10+ languages', 'Reviews in seconds'];
+
+// A line of the demo snippet. `tone` controls the left-rail highlight.
+const codeLines = [
+  { n: 1, tone: 'base', tokens: [['kw', 'function'], ['fn', ' twoSum'], ['p', '(nums, target) {']] },
+  { n: 2, tone: 'warn', tokens: [['ind', '  '], ['kw', 'for'], ['p', ' (let i = 0; i < nums.length; i++) {']] },
+  { n: 3, tone: 'warn', tokens: [['ind', '    '], ['kw', 'for'], ['p', ' (let j = i + 1; j < nums.length; j++) {']] },
+  { n: 4, tone: 'base', tokens: [['ind', '      '], ['kw', 'if'], ['p', ' (nums[i] + nums[j] === target)']] },
+  { n: 5, tone: 'base', tokens: [['ind', '        '], ['kw', 'return'], ['p', ' [i, j];']] },
+  { n: 6, tone: 'base', tokens: [['p', '  } }']] },
+  { n: 7, tone: 'base', tokens: [['p', '}']] },
+];
+
+const tokenColor = {
+  kw: 'text-violet-300',
+  fn: 'text-sky-300',
+  p: 'text-zinc-300',
+  ind: 'text-zinc-300',
+};
+
 const Hero = () => {
   const [isDemoOpen, setIsDemoOpen] = useState(false);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl animate-pulse delay-700"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/20 via-black to-black"></div>
+    <section className="relative min-h-screen flex items-center overflow-hidden pt-28 pb-20">
+      {/* Ambient background */}
+      <div className="absolute inset-0">
+        <div className="ambient w-[44rem] h-[44rem] -top-40 -left-40 bg-violet-700/25" />
+        <div className="ambient w-[40rem] h-[40rem] -bottom-48 -right-32 bg-indigo-700/20" />
+        <div className="absolute inset-0 grid-mask" />
       </div>
 
-      {/* Grid Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.02)_1px,transparent_1px)] bg-[size:100px_100px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,black,transparent)]"></div>
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
+        <div className="grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-10 items-center">
+          {/* ── Left: copy ── */}
+          <div className="min-w-0">
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] pl-1.5 pr-3 py-1 mb-7"
+            >
+              <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[11px] font-semibold text-violet-300">
+                New
+              </span>
+              <span className="text-sm text-zinc-400">AI-powered complexity analysis</span>
+            </motion.div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="inline-flex items-center space-x-2 bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-purple-500/30 rounded-full px-6 py-2 mb-8"
-          >
-            <span className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></span>
-            <span className="text-sm text-purple-300 font-semibold">trusted by 10k+ developers worldwide</span>
-          </motion.div>
+            <motion.h1
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.05 }}
+              className="text-[2.15rem] sm:text-6xl lg:text-[4.1rem] font-semibold leading-[1.05] tracking-tight"
+            >
+              <span className="text-metal">Find the bottleneck.</span>
+              <br />
+              <span className="text-gradient glow">Fix the complexity.</span>
+            </motion.h1>
 
-          {/* Main Headline */}
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-            write code that
-            <br />
-            <span className="text-gradient glow">dominates</span>
-          </h1>
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.12 }}
+              className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-400"
+            >
+              ReflexAlgo reviews your algorithms with AI — it flags time and space
+              complexity, detects DSA patterns, and rewrites the hot path. Paste
+              your code, get a senior-level review in seconds.
+            </motion.p>
 
-          {/* Subheadline */}
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-10 leading-relaxed">
-            AI-powered code optimization that turns your algorithms from slow to <span className="text-emerald-400 font-bold">lightning fast</span>.
-            <br />
-            Used by engineers at Google, Meta, and Microsoft.
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Link to="/signup">
-              <Button variant="primary" size="lg" className="group">
-                Start Optimizing Now
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.18 }}
+              className="mt-9 flex flex-col sm:flex-row sm:items-center gap-3"
+            >
+              <Link to="/signup">
+                <Button variant="primary" size="lg" className="group">
+                  Start for free
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+                </Button>
+              </Link>
+              <Button variant="outline" size="lg" className="group" onClick={() => setIsDemoOpen(true)}>
+                <Play className="w-4 h-4" />
+                Watch how it works
               </Button>
-            </Link>
-            <Button variant="outline" size="lg" className="group" onClick={() => setIsDemoOpen(true)}>
-              <Sparkles className="mr-2 w-5 h-5" />
-              see how it works ✨
-            </Button>
+            </motion.div>
+
+            <motion.ul
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.28 }}
+              className="mt-8 flex flex-wrap gap-x-6 gap-y-2"
+            >
+              {trustChips.map((chip) => (
+                <li key={chip} className="flex items-center gap-2 text-sm text-zinc-500">
+                  <Check className="w-4 h-4 text-violet-400" />
+                  {chip}
+                </li>
+              ))}
+            </motion.ul>
           </div>
 
-          {/* Demo Modal */}
-          <DemoModal isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
-          
-          {/* Social Proof */}
-          <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-400 mb-16">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">⭐</span>
-              <span className="font-semibold">4.9/5</span>
-              <span className="text-gray-500">from 2000+ reviews</span>
-            </div>
-            <div className="hidden sm:block w-px h-6 bg-white/10"></div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">⚡</span>
-              <span className="font-semibold">50k+</span>
-              <span className="text-gray-500">code optimizations</span>
-            </div>
-            <div className="hidden sm:block w-px h-6 bg-white/10"></div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🚀</span>
-              <span className="font-semibold">avg 10x</span>
-              <span className="text-gray-500">performance boost</span>
-            </div>
-          </div>
-
-          {/* Code Preview Image Placeholder */}
+          {/* ── Right: review panel ── */}
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-            className="relative max-w-5xl mx-auto"
+            initial={{ opacity: 0, y: 30, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.7, delay: 0.2, ease: [0.21, 0.47, 0.32, 0.98] }}
+            className="relative min-w-0 w-full"
           >
-            <div className="relative bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl p-8 shadow-2xl shadow-purple-900/50">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-indigo-500/10 rounded-2xl"></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  </div>
-                  <span className="text-xs text-red-400 font-semibold">❌ O(n²) detected</span>
+            <div className="ring-gradient relative rounded-2xl bg-zinc-950/80 backdrop-blur-xl shadow-2xl shadow-black/60">
+              {/* Window bar */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07]">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-zinc-700" />
+                  <span className="w-3 h-3 rounded-full bg-zinc-700" />
+                  <span className="w-3 h-3 rounded-full bg-zinc-700" />
                 </div>
-                <div className="space-y-2 text-left font-mono text-sm">
-                  <div className="text-red-400 line-through opacity-50">for (let i = 0; i {'<'} arr.length; i++) {'{'}</div>
-                  <div className="text-red-400 line-through opacity-50 pl-4">for (let j = 0; j {'<'} arr.length; j++) {'{'}</div>
-                  <div className="text-red-400 line-through opacity-50 pl-8">if (arr[i] === target) return i;</div>
-                  <div className="text-green-400 mt-3">✅ const set = new Set(arr);</div>
-                  <div className="text-green-400">✅ return set.has(target) ? arr.indexOf(target) : -1;</div>
-                  <div className="text-emerald-400 mt-4 flex items-center gap-2">
-                    <span>⚡</span>
-                    <span className="font-bold">92% faster</span>
-                    <span className="text-gray-500">• O(n²) → O(n)</span>
-                  </div>
+                <div className="flex items-center gap-2 text-xs mono text-zinc-500">
+                  <Braces className="w-3.5 h-3.5" />
+                  two-sum.js
                 </div>
+                <span className="text-[11px] font-medium text-emerald-400/90">Reviewed</span>
+              </div>
+
+              {/* Code */}
+              <div className="px-2 py-3 mono text-[13px] leading-6 overflow-x-auto hide-scrollbar">
+                {codeLines.map((line) => (
+                  <div
+                    key={line.n}
+                    className={`flex items-start gap-3 px-3 rounded-md ${
+                      line.tone === 'warn' ? 'bg-amber-500/[0.06]' : ''
+                    }`}
+                  >
+                    <span className="w-4 text-right text-zinc-600 select-none">{line.n}</span>
+                    <code className="whitespace-pre">
+                      {line.tokens.map(([t, v], i) => (
+                        <span key={i} className={tokenColor[t]}>
+                          {v}
+                        </span>
+                      ))}
+                    </code>
+                  </div>
+                ))}
+              </div>
+
+              {/* Analysis footer */}
+              <div className="border-t border-white/[0.07] p-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-300">
+                    Nested loop · O(n²)
+                  </span>
+                  <ArrowRight className="w-3.5 h-3.5 text-zinc-600" />
+                  <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-300">
+                    Hash map · O(n)
+                  </span>
+                </div>
+                <p className="text-sm text-zinc-400">
+                  <span className="text-zinc-200">Suggestion:</span> store seen values in a{' '}
+                  <span className="mono text-violet-300">Map</span> for O(1) lookups — a single
+                  pass replaces the nested scan.
+                </p>
               </div>
             </div>
-            {/* Floating icons */}
+
+            {/* Floating complexity chip */}
             <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 3, repeat: Infinity }}
-              className="absolute -top-4 -right-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg p-3 shadow-lg"
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute -top-4 -right-3 sm:-right-5 surface rounded-xl px-3 py-2 shadow-xl"
             >
-              <span className="text-2xl">⚡</span>
+              <div className="flex items-center gap-2">
+                <div className="grid place-items-center w-8 h-8 rounded-lg bg-emerald-500/15">
+                  <TrendingDown className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="leading-tight">
+                  <div className="text-[11px] text-zinc-500">Time complexity</div>
+                  <div className="text-sm font-semibold text-white mono">O(n²) → O(n)</div>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
-        </motion.div>
+        </div>
       </div>
+
+      <DemoModal isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
     </section>
   );
 };
 
 export default memo(Hero);
-

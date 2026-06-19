@@ -1,20 +1,48 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────
+   Design tokens
+   ───────────────────────────────────────────── */
+:root {
+  --bg: #08080b;
+  --surface: rgba(255, 255, 255, 0.025);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --accent: #8b5cf6;       /* violet-500 */
+  --accent-2: #6366f1;     /* indigo-500 */
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+}
+
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 5rem;
+  scroll-padding-top: 5.5rem;
 }
 
 body {
-  background-color: black;
+  background-color: var(--bg);
   color: white;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.011em;
 }
 
+/* ─────────────────────────────────────────────
+   Typography helpers
+   ───────────────────────────────────────────── */
+
+/* Metallic white→grey gradient for large headings */
+.text-metal {
+  background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.62) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Restrained accent gradient for highlighted words */
 .text-gradient {
-  background: linear-gradient(to right, rgb(99 102 241), rgb(168 85 247), rgb(236 72 153));
+  background: linear-gradient(110deg, #c4b5fd 0%, #818cf8 55%, #a78bfa 100%);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
@@ -22,44 +50,109 @@ body {
 }
 
 .glow {
-  text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+  text-shadow: 0 0 32px rgba(139, 92, 246, 0.35);
 }
 
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "liga" 0;
+}
+
+/* Small uppercase label used above section titles */
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(196, 181, 253, 0.85);
+}
+
+/* ─────────────────────────────────────────────
+   Surfaces & decoration
+   ───────────────────────────────────────────── */
+
+/* Faint dotted/line grid with a soft radial fade */
+.grid-mask {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 40%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 40%, #000 0%, transparent 100%);
+}
+
+/* Subtle ambient color blob */
+.ambient {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(120px);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Card with a hairline border that lifts on hover */
+.surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+}
+
+/* Gradient hairline border via mask (for the "premium" card frame) */
+.ring-gradient {
+  position: relative;
+}
+.ring-gradient::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(140deg, rgba(139, 92, 246, 0.5), rgba(255, 255, 255, 0.04) 40%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────
+   Scrollbars
+   ───────────────────────────────────────────── */
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
-/* ⚡ Beautiful Custom Scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
 }
-
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 10px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(139, 92, 246, 0.3);
   border-radius: 10px;
   transition: all 0.2s ease;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(139, 92, 246, 0.5);
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:active {
-  background: rgba(139, 92, 246, 0.7);
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

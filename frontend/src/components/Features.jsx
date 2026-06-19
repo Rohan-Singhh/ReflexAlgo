@@ -1,93 +1,82 @@
 import { motion } from 'framer-motion';
-import { Zap, Target, Code2, BarChart3, Sparkles, Shield } from 'lucide-react';
+import { Gauge, ListChecks, Layers, LineChart, Wand2, Languages } from 'lucide-react';
+import { Section, SectionHeading } from './ui/Section';
 
 const features = [
   {
-    icon: Zap,
-    title: 'instant analysis',
-    description: 'spots O(n²) loops in milliseconds. because time is money.',
+    icon: Gauge,
+    title: 'Complexity analysis',
+    description:
+      'Time and space complexity for every function, with the exact lines driving the worst case.',
   },
   {
-    icon: Target,
-    title: 'real suggestions',
-    description: 'not "try harder" BS. actual line-by-line fixes.',
+    icon: ListChecks,
+    title: 'Actionable suggestions',
+    description:
+      'Concrete, line-referenced fixes — not generic advice. Each comes with the expected impact.',
   },
   {
-    icon: Code2,
-    title: 'pattern matching',
-    description: 'recognizes 50+ DSA patterns. sliding window? we got you.',
+    icon: Layers,
+    title: 'Pattern detection',
+    description:
+      'Recognizes sliding window, two pointers, DP, and dozens of other DSA patterns in your code.',
   },
   {
-    icon: BarChart3,
-    title: 'flex dashboard',
-    description: 'track your glow-up. share your wins. become that person.',
+    icon: LineChart,
+    title: 'Progress dashboard',
+    description:
+      'Track reviews, mastered patterns, and your improvement over time in one place.',
   },
   {
-    icon: Sparkles,
-    title: 'auto refactoring',
-    description: 'AI rewrites your code. cleaner. faster. chefs kiss 👨‍🍳',
+    icon: Wand2,
+    title: 'Automatic refactors',
+    description:
+      'Get an optimized rewrite of the hot path with a clear before-and-after comparison.',
   },
   {
-    icon: Shield,
-    title: 'works everywhere',
-    description: 'python, js, java, c++, rust. if you code it, we read it.',
+    icon: Languages,
+    title: 'Multi-language',
+    description:
+      'Python, JavaScript, Java, C++, Rust and more — the same depth of review across all of them.',
   },
 ];
 
 const Features = () => {
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-full bg-gradient-to-b from-purple-900/10 to-transparent rounded-full blur-3xl"></div>
+    <Section id="features">
+      <div className="ambient w-[36rem] h-[36rem] top-0 left-1/2 -translate-x-1/2 bg-violet-800/10" />
 
-      <div className="max-w-7xl mx-auto relative">
-        <motion.div
-          id="features"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl sm:text-5xl font-bold mb-4">
-            why this <span className="text-gradient">slaps</span>
-          </h2>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            features that actually matter. none of that fluff.
-          </p>
-        </motion.div>
+      <SectionHeading
+        eyebrow="Capabilities"
+        title="Everything you need to"
+        accent="ship faster code"
+        subtitle="A focused set of tools that turn a rough solution into one you'd be happy to put in production."
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              whileHover={{ scale: 1.05 }}
-              className="group bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-xl p-6 hover:border-purple-500/50 transition-all duration-300 cursor-pointer"
-            >
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 p-3 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg group-hover:shadow-lg group-hover:shadow-purple-500/50 transition-all duration-300">
-                  <feature.icon className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2 group-hover:text-gradient transition-all">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-400 text-sm leading-relaxed">
-                    {feature.description}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.04]">
+        {features.map((feature, index) => (
+          <motion.div
+            key={feature.title}
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.45, delay: (index % 3) * 0.08 }}
+            className="group relative bg-zinc-950/60 p-7 transition-colors duration-300 hover:bg-zinc-900/60"
+          >
+            <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl border border-white/10 bg-white/[0.03] text-violet-300 transition-colors group-hover:border-violet-500/40 group-hover:text-violet-200">
+              <feature.icon className="w-5 h-5" strokeWidth={1.75} />
+            </div>
+            <h3 className="mt-5 text-lg font-semibold tracking-tight text-white">
+              {feature.title}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+              {feature.description}
+            </p>
+          </motion.div>
+        ))}
       </div>
-    </section>
+    </Section>
   );
 };
 
 export default Features;
-

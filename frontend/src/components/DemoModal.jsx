@@ -67,8 +67,8 @@ const steps = [
             className="bg-yellow-500/20 border border-yellow-500/30 rounded p-2"
           >
             <div className="flex items-center justify-between text-xs">
-              <span className="text-yellow-400">⚠️ Time Complexity</span>
-              <span className="text-yellow-400 font-bold">O(n²)</span>
+              <span className="text-yellow-400">Time complexity</span>
+              <span className="text-yellow-400 font-bold mono">O(n²)</span>
             </div>
           </motion.div>
 
@@ -79,7 +79,7 @@ const steps = [
             className="bg-red-500/20 border border-red-500/30 rounded p-2"
           >
             <div className="flex items-center justify-between text-xs">
-              <span className="text-red-400">❌ Nested Loops</span>
+              <span className="text-red-400">Nested loops</span>
               <span className="text-red-400 font-bold">2 found</span>
             </div>
           </motion.div>
@@ -91,8 +91,8 @@ const steps = [
             className="bg-blue-500/20 border border-blue-500/30 rounded p-2"
           >
             <div className="flex items-center justify-between text-xs">
-              <span className="text-blue-400">💡 Pattern Detected</span>
-              <span className="text-blue-400 font-bold">Hash Map</span>
+              <span className="text-blue-400">Pattern detected</span>
+              <span className="text-blue-400 font-bold">Hash map</span>
             </div>
           </motion.div>
         </div>
@@ -108,8 +108,11 @@ const steps = [
     demo: (
       <div className="bg-gray-900 rounded-lg p-4 border border-emerald-500/30 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-emerald-400 font-semibold">✅ OPTIMIZED</span>
-          <span className="text-xs text-gray-400">algorithm_optimized.js</span>
+          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
+            <CheckCircle className="w-3.5 h-3.5" />
+            Optimized
+          </span>
+          <span className="text-xs text-gray-400 mono">algorithm_optimized.js</span>
         </div>
         
         <div className="font-mono text-sm space-y-1 text-gray-300">
@@ -129,7 +132,7 @@ const steps = [
           </div>
           <div className="bg-emerald-500/10 rounded p-2">
             <div className="text-xs text-gray-400">Performance</div>
-            <div className="text-emerald-400 font-bold">92% faster ⚡</div>
+            <div className="text-emerald-400 font-bold">~10x faster</div>
           </div>
         </div>
       </div>
@@ -268,7 +271,7 @@ const DemoModal = ({ isOpen, onClose }) => {
                             initial={{ width: 0 }}
                             animate={{ width: currentStep > index ? '100%' : 0 }}
                             transition={{ duration: 0.3 }}
-                            className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                            className="h-full bg-gradient-to-r from-violet-500 to-indigo-500"
                           />
                         </div>
                       )}

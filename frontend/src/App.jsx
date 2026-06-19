@@ -29,16 +29,16 @@ const PageLoader = () => (
 
 // Landing Page Component
 const LandingPage = () => (
-  <div className="min-h-screen bg-black text-white overflow-x-hidden">
+  <div className="min-h-screen text-white overflow-x-hidden">
     <Navbar />
     <main>
       <Hero />
       <Suspense fallback={null}>
         <Features />
         <HowItWorks />
+        <TargetAudience />
         <Pricing />
         <Docs />
-        <TargetAudience />
         <CTA />
       </Suspense>
     </main>
